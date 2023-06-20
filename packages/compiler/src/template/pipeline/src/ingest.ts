@@ -288,8 +288,12 @@ function ingestPropertyBinding(
             xref, name, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl)),
             unit));
         break;
+      case e.BindingType.Class:
+        throw Error('Unexpected interpolation in class property binding');
+      // TODO: implement remaining binding types.
+      case e.BindingType.Animation:
+      case e.BindingType.Attribute:
       default:
-        // TODO: implement remaining binding types.
         throw Error(`Interpolated property binding type not handled: ${type}`);
     }
   } else {
@@ -317,8 +321,16 @@ function ingestPropertyBinding(
         }
         view.update.push(ir.createStylePropOp(xref, name, convertAst(value, view.tpl), unit));
         break;
+      case e.BindingType.Class:
+        if (bindingKind !== ir.ElementAttributeKind.Binding) {
+          throw Error('Unexpected class binding on ng-template');
+        }
+        view.update.push(ir.createClassPropOp(xref, name, convertAst(value, view.tpl)));
+        break;
+      // TODO: implement remaining binding types.
+      case e.BindingType.Animation:
+      case e.BindingType.Attribute:
       default:
-        // TODO: implement remaining binding types.
         throw Error(`Property binding type not handled: ${type}`);
     }
   }
