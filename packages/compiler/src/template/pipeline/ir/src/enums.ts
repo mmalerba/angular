@@ -227,6 +227,11 @@ export enum ExpressionKind {
    * An empty expression that will be stipped before generating the final output.
    */
   EmptyExpr,
+
+  /**
+   * An expression representing a sanitizer function.
+   */
+  SanitizerExpr,
 }
 
 /**

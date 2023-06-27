@@ -19,10 +19,10 @@ import type {UpdateOp} from './ops/update';
 /**
  * An `o.Expression` subtype representing a logical expression in the intermediate representation.
  */
-export type Expression =
-    LexicalReadExpr|ReferenceExpr|ContextExpr|NextContextExpr|GetCurrentViewExpr|RestoreViewExpr|
-    ResetViewExpr|ReadVariableExpr|PureFunctionExpr|PureFunctionParameterExpr|PipeBindingExpr|
-    PipeBindingVariadicExpr|SafePropertyReadExpr|SafeKeyedReadExpr|SafeInvokeFunctionExpr|EmptyExpr;
+export type Expression = LexicalReadExpr|ReferenceExpr|ContextExpr|NextContextExpr|
+    GetCurrentViewExpr|RestoreViewExpr|ResetViewExpr|ReadVariableExpr|PureFunctionExpr|
+    PureFunctionParameterExpr|PipeBindingExpr|PipeBindingVariadicExpr|SafePropertyReadExpr|
+    SafeKeyedReadExpr|SafeInvokeFunctionExpr|EmptyExpr|SanitizerExpr;
 
 /**
  * Transformer type which converts expressions into general `o.Expression`s (which may be an
@@ -624,6 +624,39 @@ export class EmptyExpr extends ExpressionBase {
 
   override clone(): EmptyExpr {
     return new EmptyExpr();
+  }
+
+  override transformInternalExpressions(): void {}
+}
+
+export enum SanitizerFn {
+  Html,
+  Script,
+  Style,
+  Url,
+  ResourceUrl,
+  IframeAttribute,
+}
+
+export class SanitizerExpr extends ExpressionBase {
+  constructor(public fn: SanitizerFn) {
+    super();
+  }
+
+  override readonly kind = ExpressionKind.SanitizerExpr;
+
+  override visitExpression(visitor: o.ExpressionVisitor, context: any): any {}
+
+  override isEquivalent(e: Expression): boolean {
+    return e instanceof SanitizerExpr && e.fn === this.fn;
+  }
+
+  override isConstant() {
+    return true;
+  }
+
+  override clone(): SanitizerExpr {
+    return new SanitizerExpr(this.fn);
   }
 
   override transformInternalExpressions(): void {}
