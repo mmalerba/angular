@@ -38,6 +38,7 @@ import {phaseSlotAllocation} from './phases/slot_allocation';
 import {phaseTemporaryVariables} from './phases/temporary_variables';
 import {phaseVarCounting} from './phases/var_counting';
 import {phaseVariableOptimization} from './phases/variable_optimization';
+import {phaseResolveDollarEvent} from './phases/resolve_dollar_event';
 
 /**
  * Run all transformation phases in the correct order against a `ComponentCompilation`. After this
@@ -50,6 +51,7 @@ export function transformTemplate(cpl: ComponentCompilation): void {
   phasePureLiteralStructures(cpl);
   phaseGenerateVariables(cpl);
   phaseSaveRestoreView(cpl);
+  phaseResolveDollarEvent(cpl);
   phaseResolveNames(cpl);
   phaseResolveContexts(cpl);
   phaseLocalRefs(cpl);
