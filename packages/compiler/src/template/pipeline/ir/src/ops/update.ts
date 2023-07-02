@@ -93,6 +93,9 @@ export interface PropertyOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnSl
    * The kind of binding represented by this op, either a template binding or a normal binding.
    */
   bindingKind: ElementAttributeKind.Template|ElementAttributeKind.Binding;
+
+  /** Whether the binding is an animation trigger. */
+  isAnimationTrigger: boolean;
 }
 
 /**
@@ -107,11 +110,31 @@ export function createPropertyOp(
     bindingKind,
     name,
     expression,
+    isAnimationTrigger: false,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
   };
 }
+
+/**
+ * Create a `PropertyOp` for an animation property.
+ */
+export function createPropertyOpForAnimation(
+    xref: XrefId, name: string, expression: o.Expression): PropertyOp {
+  return {
+    kind: OpKind.Property,
+    target: xref,
+    bindingKind: ElementAttributeKind.Binding,
+    name,
+    expression,
+    isAnimationTrigger: true,
+    ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
+    ...TRAIT_CONSUMES_VARS,
+    ...NEW_OP,
+  };
+}
+
 
 /**
  * A logical operation representing binding to a style property in the update IR.

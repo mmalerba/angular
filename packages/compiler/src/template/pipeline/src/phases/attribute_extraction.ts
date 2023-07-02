@@ -77,6 +77,9 @@ function populateElementAttributes(view: ViewCompilation, compatibility: boolean
         break;
 
       case ir.OpKind.Property:
+        if (op.isAnimationTrigger) {
+          continue;  // Don't extract animation properties.
+        }
         ownerOp = lookupElement(elements, op.target);
         ir.assertIsElementAttributes(ownerOp.attributes);
         removeIfExpressionIsEmpty(op, op.expression);

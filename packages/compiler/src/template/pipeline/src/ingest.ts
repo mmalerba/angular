@@ -302,8 +302,8 @@ function ingestPropertyBinding(
         break;
       case e.BindingType.Class:
         throw Error('Unexpected interpolation in class property binding');
-      // TODO: implement remaining binding types.
       case e.BindingType.Animation:
+        throw Error('Unexpected interpolation in animation property binding');
       default:
         throw Error(`Interpolated property binding type not handled: ${type}`);
     }
@@ -345,8 +345,12 @@ function ingestPropertyBinding(
         }
         view.update.push(ir.createClassPropOp(xref, name, convertAst(value, view.tpl)));
         break;
-      // TODO: implement remaining binding types.
       case e.BindingType.Animation:
+        if (bindingKind !== ir.ElementAttributeKind.Binding) {
+          throw Error('Unexpected animation binding on ng-template');
+        }
+        view.update.push(ir.createPropertyOpForAnimation(xref, name, convertAst(value, view.tpl)));
+        break;
       default:
         throw Error(`Property binding type not handled: ${type}`);
     }

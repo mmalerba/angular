@@ -33,6 +33,11 @@ function addNamesToView(
 
   for (const op of view.ops()) {
     switch (op.kind) {
+      case ir.OpKind.Property:
+        if (op.isAnimationTrigger) {
+          op.name = '@' + op.name;
+        }
+        break;
       case ir.OpKind.Listener:
         if (op.handlerFnName === null) {
           // TODO(alxhub): convert this temporary name to match how the
