@@ -223,7 +223,15 @@ function ingestBindings(
   }
 
   for (const output of element.outputs) {
-    const listenerOp = ir.createListenerOp(op.xref, output.name, op.tag);
+    let listenerOp: ir.ListenerOp;
+    if (output.type === e.ParsedEventType.Animation) {
+      if (output.phase === null) {
+        throw Error('Animation listener should have a phase');
+      }
+      listenerOp = ir.createListenerOpForAnimation(op.xref, output.name, output.phase!, op.tag)
+    } else {
+      listenerOp = ir.createListenerOp(op.xref, output.name, op.tag);
+    }
     // if output.handler is a chain, then push each statement from the chain separately, and
     // return the last one?
     let inputExprs: e.AST[];
