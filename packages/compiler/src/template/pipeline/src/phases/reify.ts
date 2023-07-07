@@ -7,10 +7,20 @@
  */
 
 import * as o from '../../../../output/output_ast';
+import {Identifiers} from '../../../../render3/r3_identifiers';
 import * as ir from '../../ir';
 
 import type {ComponentCompilation, ViewCompilation} from '../compilation';
 import * as ng from '../instruction';
+
+// TODO: Ok to pull in `Identifiers` here? I mostly see it used in `instruction.ts`
+const sanitizerSymbolMap = new Map<ir.SanitizerFn, o.ExternalReference>([
+  [ir.SanitizerFn.Html, Identifiers.sanitizeHtml],
+  [ir.SanitizerFn.IframeAttribute, Identifiers.validateIframeAttribute],
+  [ir.SanitizerFn.ResourceUrl, Identifiers.sanitizeResourceUrl],
+  [ir.SanitizerFn.Script, Identifiers.sanitizeScript],
+  [ir.SanitizerFn.Style, Identifiers.sanitizeStyle], [ir.SanitizerFn.Url, Identifiers.sanitizeUrl]
+]);
 
 /**
  * Compiles semantic operations across all views and generates output `o.Statement`s with actual
@@ -115,34 +125,37 @@ function reifyUpdateOperations(_view: ViewCompilation, ops: ir.OpList<ir.UpdateO
   for (const op of ops) {
     ir.transformExpressionsInOp(op, reifyIrExpression, ir.VisitorContextFlag.None);
 
+    debugger;
     switch (op.kind) {
       case ir.OpKind.Advance:
         ir.OpList.replace(op, ng.advance(op.delta));
         break;
       case ir.OpKind.Property:
-        ir.OpList.replace(op, ng.property(op.name, op.expression));
+        ir.OpList.replace(op, ng.property(op.name, op.expression, op.sanitizer));
         break;
       case ir.OpKind.StyleProp:
-        ir.OpList.replace(op, ng.styleProp(op.name, op.expression, op.unit));
+        ir.OpList.replace(op, ng.styleProp(op.name, op.expression, op.unit, op.sanitizer));
         break;
       case ir.OpKind.ClassProp:
         ir.OpList.replace(op, ng.classProp(op.name, op.expression));
         break;
       case ir.OpKind.StyleMap:
-        ir.OpList.replace(op, ng.styleMap(op.expression));
+        ir.OpList.replace(op, ng.styleMap(op.expression, op.sanitizer));
         break;
       case ir.OpKind.ClassMap:
         ir.OpList.replace(op, ng.classMap(op.expression));
         break;
       case ir.OpKind.InterpolateProperty:
-        ir.OpList.replace(op, ng.propertyInterpolate(op.name, op.strings, op.expressions));
+        ir.OpList.replace(
+            op, ng.propertyInterpolate(op.name, op.strings, op.expressions, op.sanitizer));
         break;
       case ir.OpKind.InterpolateStyleProp:
         ir.OpList.replace(
-            op, ng.stylePropInterpolate(op.name, op.strings, op.expressions, op.unit));
+            op,
+            ng.stylePropInterpolate(op.name, op.strings, op.expressions, op.unit, op.sanitizer));
         break;
       case ir.OpKind.InterpolateStyleMap:
-        ir.OpList.replace(op, ng.styleMapInterpolate(op.strings, op.expressions));
+        ir.OpList.replace(op, ng.styleMapInterpolate(op.strings, op.expressions, op.sanitizer));
         break;
       case ir.OpKind.InterpolateClassMap:
         ir.OpList.replace(op, ng.classMapInterpolate(op.strings, op.expressions));
@@ -151,10 +164,11 @@ function reifyUpdateOperations(_view: ViewCompilation, ops: ir.OpList<ir.UpdateO
         ir.OpList.replace(op, ng.textInterpolate(op.strings, op.expressions));
         break;
       case ir.OpKind.Attribute:
-        ir.OpList.replace(op, ng.attribute(op.name, op.value));
+        ir.OpList.replace(op, ng.attribute(op.name, op.value, op.sanitizer));
         break;
       case ir.OpKind.InterpolateAttribute:
-        ir.OpList.replace(op, ng.attributeInterpolate(op.name, op.strings, op.expressions));
+        ir.OpList.replace(
+            op, ng.attributeInterpolate(op.name, op.strings, op.expressions, op.sanitizer));
         break;
       case ir.OpKind.Variable:
         if (op.variable.name === null) {
@@ -176,6 +190,7 @@ function reifyUpdateOperations(_view: ViewCompilation, ops: ir.OpList<ir.UpdateO
 }
 
 function reifyIrExpression(expr: o.Expression): o.Expression {
+  debugger;
   if (!ir.isIrExpression(expr)) {
     return expr;
   }
@@ -222,6 +237,8 @@ function reifyIrExpression(expr: o.Expression): o.Expression {
       return ng.pipeBind(expr.slot!, expr.varOffset!, expr.args);
     case ir.ExpressionKind.PipeBindingVariadic:
       return ng.pipeBindV(expr.slot!, expr.varOffset!, expr.args);
+    case ir.ExpressionKind.SanitizerExpr:
+      return o.importExpr(sanitizerSymbolMap.get(expr.fn)!);
     default:
       throw new Error(`AssertionError: Unsupported reification of ir.Expression kind: ${
           ir.ExpressionKind[(expr as ir.Expression).kind]}`);

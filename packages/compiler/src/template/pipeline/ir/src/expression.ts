@@ -19,10 +19,11 @@ import type {UpdateOp} from './ops/update';
 /**
  * An `o.Expression` subtype representing a logical expression in the intermediate representation.
  */
-export type Expression = LexicalReadExpr|ReferenceExpr|ContextExpr|NextContextExpr|
-    GetCurrentViewExpr|RestoreViewExpr|ResetViewExpr|ReadVariableExpr|PureFunctionExpr|
-    PureFunctionParameterExpr|PipeBindingExpr|PipeBindingVariadicExpr|SafePropertyReadExpr|
-    SafeKeyedReadExpr|SafeInvokeFunctionExpr|EmptyExpr|AssignTemporaryExpr|ReadTemporaryExpr;
+export type Expression =
+    LexicalReadExpr|ReferenceExpr|ContextExpr|NextContextExpr|GetCurrentViewExpr|RestoreViewExpr|
+    ResetViewExpr|ReadVariableExpr|PureFunctionExpr|PureFunctionParameterExpr|PipeBindingExpr|
+    PipeBindingVariadicExpr|SafePropertyReadExpr|SafeKeyedReadExpr|SafeInvokeFunctionExpr|EmptyExpr|
+    AssignTemporaryExpr|ReadTemporaryExpr|SanitizerExpr;
 
 /**
  * Transformer type which converts expressions into general `o.Expression`s (which may be an
@@ -709,6 +710,39 @@ export class ReadTemporaryExpr extends ExpressionBase {
   }
 }
 
+export enum SanitizerFn {
+  Html,
+  Script,
+  Style,
+  Url,
+  ResourceUrl,
+  IframeAttribute,
+}
+
+export class SanitizerExpr extends ExpressionBase {
+  override readonly kind = ExpressionKind.SanitizerExpr;
+
+  constructor(public fn: SanitizerFn) {
+    super();
+  }
+
+  override visitExpression(visitor: o.ExpressionVisitor, context: any): any {}
+
+  override isEquivalent(e: Expression): boolean {
+    return e instanceof SanitizerExpr && e.fn === this.fn;
+  }
+
+  override isConstant() {
+    return true;
+  }
+
+  override clone(): SanitizerExpr {
+    return new SanitizerExpr(this.fn);
+  }
+
+  override transformInternalExpressions(): void {}
+}
+
 /**
  * Visits all `Expression`s in the AST of `op` with the `visitor` function.
  */
@@ -737,6 +771,10 @@ export function transformExpressionsInOp(
     case OpKind.Property:
     case OpKind.StyleProp:
     case OpKind.StyleMap:
+      op.expression = transformExpressionsInExpression(op.expression, transform, flags);
+      op.sanitizer =
+          op.sanitizer && transformExpressionsInExpression(op.sanitizer, transform, flags);
+      break;
     case OpKind.ClassProp:
     case OpKind.ClassMap:
       op.expression = transformExpressionsInExpression(op.expression, transform, flags);
@@ -744,6 +782,13 @@ export function transformExpressionsInOp(
     case OpKind.InterpolateProperty:
     case OpKind.InterpolateStyleProp:
     case OpKind.InterpolateStyleMap:
+    case OpKind.InterpolateAttribute:
+      for (let i = 0; i < op.expressions.length; i++) {
+        op.expressions[i] = transformExpressionsInExpression(op.expressions[i], transform, flags);
+      }
+      op.sanitizer =
+          op.sanitizer && transformExpressionsInExpression(op.sanitizer, transform, flags)
+      break;
     case OpKind.InterpolateClassMap:
     case OpKind.InterpolateText:
       for (let i = 0; i < op.expressions.length; i++) {
@@ -754,14 +799,9 @@ export function transformExpressionsInOp(
       transformExpressionsInStatement(op.statement, transform, flags);
       break;
     case OpKind.Attribute:
-      if (op.value) {
-        op.value = transformExpressionsInExpression(op.value, transform, flags);
-      }
-      break;
-    case OpKind.InterpolateAttribute:
-      for (let i = 0; i < op.expressions.length; i++) {
-        op.expressions[i] = transformExpressionsInExpression(op.expressions[i], transform, flags);
-      }
+      op.value = op.value && transformExpressionsInExpression(op.value, transform, flags);
+      op.sanitizer =
+          op.sanitizer && transformExpressionsInExpression(op.sanitizer, transform, flags);
       break;
     case OpKind.Variable:
       op.initializer = transformExpressionsInExpression(op.initializer, transform, flags);

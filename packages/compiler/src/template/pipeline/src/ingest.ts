@@ -7,6 +7,7 @@
  */
 
 import {ConstantPool} from '../../../constant_pool';
+import {SecurityContext} from '../../../core';
 import * as e from '../../../expression_parser/ast';
 import * as o from '../../../output/output_ast';
 import * as t from '../../../render3/r3_ast';
@@ -203,7 +204,8 @@ function ingestBindings(
     for (const attr of element.templateAttrs) {
       if (attr instanceof t.TextAttribute) {
         view.update.push(ir.createAttributeOp(
-            op.xref, ir.ElementAttributeKind.Template, attr.name, o.literal(attr.value)));
+            op.xref, ir.ElementAttributeKind.Template, attr.name, o.literal(attr.value),
+            SecurityContext.NONE));
       } else {
         ingestPropertyBinding(view, op.xref, ir.ElementAttributeKind.Template, attr);
       }
@@ -215,7 +217,8 @@ function ingestBindings(
     // `[attr.foo]="bar"` or `attr.foo="{{bar}}"`, both of which will be handled as inputs with
     // `BindingType.Attribute`.
     view.update.push(ir.createAttributeOp(
-        op.xref, ir.ElementAttributeKind.Attribute, attr.name, o.literal(attr.value)));
+        op.xref, ir.ElementAttributeKind.Attribute, attr.name, o.literal(attr.value),
+        SecurityContext.NONE));
   }
 
   for (const input of element.inputs) {
@@ -265,7 +268,7 @@ function ingestBindings(
 function ingestPropertyBinding(
     view: ViewCompilation, xref: ir.XrefId,
     bindingKind: ir.ElementAttributeKind.Binding|ir.ElementAttributeKind.Template,
-    {name, value, type, unit}: t.BoundAttribute): void {
+    {name, value, type, unit, securityContext}: t.BoundAttribute): void {
   if (value instanceof e.ASTWithSource) {
     value = value.ast;
   }
@@ -278,17 +281,19 @@ function ingestPropertyBinding(
             throw Error('Unexpected style binding on ng-template');
           }
           view.update.push(ir.createInterpolateStyleMapOp(
-              xref, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl))));
+              xref, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl)),
+              securityContext));
         } else if (name === 'class') {
           if (bindingKind !== ir.ElementAttributeKind.Binding) {
             throw Error('Unexpected class binding on ng-template');
           }
           view.update.push(ir.createInterpolateClassMapOp(
-              xref, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl))));
+              xref, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl)),
+              securityContext));
         } else {
           view.update.push(ir.createInterpolatePropertyOp(
               xref, bindingKind, name, value.strings,
-              value.expressions.map(expr => convertAst(expr, view.tpl))));
+              value.expressions.map(expr => convertAst(expr, view.tpl)), securityContext));
         }
         break;
       case e.BindingType.Style:
@@ -297,7 +302,7 @@ function ingestPropertyBinding(
         }
         view.update.push(ir.createInterpolateStylePropOp(
             xref, name, value.strings, value.expressions.map(expr => convertAst(expr, view.tpl)),
-            unit));
+            unit, securityContext));
         break;
       case e.BindingType.Attribute:
         if (bindingKind !== ir.ElementAttributeKind.Binding) {
@@ -305,7 +310,7 @@ function ingestPropertyBinding(
         }
         const attributeInterpolate = ir.createInterpolateAttributeOp(
             xref, bindingKind, name, value.strings,
-            value.expressions.map(expr => convertAst(expr, view.tpl)));
+            value.expressions.map(expr => convertAst(expr, view.tpl)), securityContext);
         view.update.push(attributeInterpolate);
         break;
       case e.BindingType.Class:
@@ -323,35 +328,38 @@ function ingestPropertyBinding(
           if (bindingKind !== ir.ElementAttributeKind.Binding) {
             throw Error('Unexpected style binding on ng-template');
           }
-          view.update.push(ir.createStyleMapOp(xref, convertAst(value, view.tpl)));
+          view.update.push(ir.createStyleMapOp(xref, convertAst(value, view.tpl), securityContext));
         } else if (name === 'class') {
           if (bindingKind !== ir.ElementAttributeKind.Binding) {
             throw Error('Unexpected class binding on ng-template');
           }
-          view.update.push(ir.createClassMapOp(xref, convertAst(value, view.tpl)));
+          view.update.push(ir.createClassMapOp(xref, convertAst(value, view.tpl), securityContext));
         } else {
-          view.update.push(
-              ir.createPropertyOp(xref, bindingKind, name, convertAst(value, view.tpl)));
+          view.update.push(ir.createPropertyOp(
+              xref, bindingKind, name, convertAst(value, view.tpl), securityContext));
         }
         break;
       case e.BindingType.Style:
         if (bindingKind !== ir.ElementAttributeKind.Binding) {
           throw Error('Unexpected style binding on ng-template');
         }
-        view.update.push(ir.createStylePropOp(xref, name, convertAst(value, view.tpl), unit));
+        view.update.push(
+            ir.createStylePropOp(xref, name, convertAst(value, view.tpl), unit, securityContext));
         break;
       case e.BindingType.Attribute:
         if (bindingKind !== ir.ElementAttributeKind.Binding) {
           throw new Error('Attribute bindings on templates are not expected to be valid');
         }
-        const attrOp = ir.createAttributeOp(xref, bindingKind, name, convertAst(value, view.tpl));
+        const attrOp = ir.createAttributeOp(
+            xref, bindingKind, name, convertAst(value, view.tpl), securityContext);
         view.update.push(attrOp);
         break;
       case e.BindingType.Class:
         if (bindingKind !== ir.ElementAttributeKind.Binding) {
           throw Error('Unexpected class binding on ng-template');
         }
-        view.update.push(ir.createClassPropOp(xref, name, convertAst(value, view.tpl)));
+        view.update.push(
+            ir.createClassPropOp(xref, name, convertAst(value, view.tpl), securityContext));
         break;
       case e.BindingType.Animation:
         if (bindingKind !== ir.ElementAttributeKind.Binding) {

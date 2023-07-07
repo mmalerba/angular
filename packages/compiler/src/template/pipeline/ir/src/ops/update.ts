@@ -6,6 +6,7 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {SecurityContext} from '../../../../../core';
 import * as o from '../../../../../output/output_ast';
 import {ElementAttributeKind} from '../element';
 import {OpKind} from '../enums';
@@ -96,6 +97,16 @@ export interface PropertyOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnSl
 
   /** Whether the binding is an animation trigger. */
   isAnimationTrigger: boolean;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
@@ -103,7 +114,7 @@ export interface PropertyOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnSl
  */
 export function createPropertyOp(
     xref: XrefId, bindingKind: ElementAttributeKind.Template|ElementAttributeKind.Binding,
-    name: string, expression: o.Expression): PropertyOp {
+    name: string, expression: o.Expression, securityContext: SecurityContext): PropertyOp {
   return {
     kind: OpKind.Property,
     target: xref,
@@ -111,6 +122,8 @@ export function createPropertyOp(
     name,
     expression,
     isAnimationTrigger: false,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -161,17 +174,30 @@ export interface StylePropOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnS
    * The unit of the bound value.
    */
   unit: string|null;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /** Create a `StylePropOp`. */
 export function createStylePropOp(
-    xref: XrefId, name: string, expression: o.Expression, unit: string|null): StylePropOp {
+    xref: XrefId, name: string, expression: o.Expression, unit: string|null,
+    securityContext: SecurityContext): StylePropOp {
   return {
     kind: OpKind.StyleProp,
     target: xref,
     name,
     expression,
     unit,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -198,18 +224,31 @@ export interface ClassPropOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnS
    * Expression which is bound to the property.
    */
   expression: o.Expression;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create a `ClassPropOp`.
  */
 export function createClassPropOp(
-    xref: XrefId, name: string, expression: o.Expression): ClassPropOp {
+    xref: XrefId, name: string, expression: o.Expression,
+    securityContext: SecurityContext): ClassPropOp {
   return {
     kind: OpKind.ClassProp,
     target: xref,
     name,
     expression,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -231,14 +270,27 @@ export interface StyleMapOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnSl
    * Expression which is bound to the property.
    */
   expression: o.Expression;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /** Create a `StyleMapOp`. */
-export function createStyleMapOp(xref: XrefId, expression: o.Expression): StyleMapOp {
+export function createStyleMapOp(
+    xref: XrefId, expression: o.Expression, securityContext: SecurityContext): StyleMapOp {
   return {
     kind: OpKind.StyleMap,
     target: xref,
     expression,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -260,16 +312,29 @@ export interface ClassMapOp extends Op<UpdateOp>, ConsumesVarsTrait, DependsOnSl
    * Expression which is bound to the property.
    */
   expression: o.Expression;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create a `ClassMapOp`.
  */
-export function createClassMapOp(xref: XrefId, expression: o.Expression): ClassMapOp {
+export function createClassMapOp(
+    xref: XrefId, expression: o.Expression, securityContext: SecurityContext): ClassMapOp {
   return {
     kind: OpKind.ClassMap,
     target: xref,
     expression,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -301,20 +366,32 @@ export interface AttributeOp extends Op<UpdateOp> {
    * The value of the attribute.
    */
   value: o.Expression;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create an `AttributeOp`.
  */
 export function createAttributeOp(
-    target: XrefId, attributeKind: ElementAttributeKind, name: string,
-    value: o.Expression): AttributeOp {
+    target: XrefId, attributeKind: ElementAttributeKind, name: string, value: o.Expression,
+    securityContext: SecurityContext): AttributeOp {
   return {
     kind: OpKind.Attribute,
     target,
     attributeKind,
     name,
     value,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -356,6 +433,16 @@ export interface InterpolatePropertyOp extends Op<UpdateOp>, ConsumesVarsTrait,
    * The kind of binding represented by this op, either a template binding or a normal binding.
    */
   bindingKind: ElementAttributeKind.Template|ElementAttributeKind.Binding;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
@@ -363,7 +450,8 @@ export interface InterpolatePropertyOp extends Op<UpdateOp>, ConsumesVarsTrait,
  */
 export function createInterpolatePropertyOp(
     xref: XrefId, bindingKind: ElementAttributeKind.Template|ElementAttributeKind.Binding,
-    name: string, strings: string[], expressions: o.Expression[]): InterpolatePropertyOp {
+    name: string, strings: string[], expressions: o.Expression[],
+    securityContext: SecurityContext): InterpolatePropertyOp {
   return {
     kind: OpKind.InterpolateProperty,
     target: xref,
@@ -371,6 +459,8 @@ export function createInterpolatePropertyOp(
     name,
     strings,
     expressions,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -408,11 +498,21 @@ export interface InterpolateAttributeOp extends Op<UpdateOp>, ConsumesVarsTrait,
    * Conceptually interwoven in between the `strings`.
    */
   expressions: o.Expression[];
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 export function createInterpolateAttributeOp(
     target: XrefId, attributeKind: ElementAttributeKind, name: string, strings: string[],
-    expressions: o.Expression[]): InterpolateAttributeOp {
+    expressions: o.Expression[], securityContext: SecurityContext): InterpolateAttributeOp {
   return {
     kind: OpKind.InterpolateAttribute,
     target: target,
@@ -420,6 +520,8 @@ export function createInterpolateAttributeOp(
     name,
     strings,
     expressions,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -461,14 +563,24 @@ export interface InterpolateStylePropOp extends Op<UpdateOp>, ConsumesVarsTrait,
    * The unit of the bound value.
    */
   unit: string|null;
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create a `InterpolateStyleProp`.
  */
 export function createInterpolateStylePropOp(
-    xref: XrefId, name: string, strings: string[], expressions: o.Expression[],
-    unit: string|null): InterpolateStylePropOp {
+    xref: XrefId, name: string, strings: string[], expressions: o.Expression[], unit: string|null,
+    securityContext: SecurityContext): InterpolateStylePropOp {
   return {
     kind: OpKind.InterpolateStyleProp,
     target: xref,
@@ -476,6 +588,8 @@ export function createInterpolateStylePropOp(
     strings,
     expressions,
     unit,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -507,18 +621,31 @@ export interface InterpolateStyleMapOp extends Op<UpdateOp>, ConsumesVarsTrait,
    * Conceptually interwoven in between the `strings`.
    */
   expressions: o.Expression[];
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create a `InterpolateStyleMap`.
  */
 export function createInterpolateStyleMapOp(
-    xref: XrefId, strings: string[], expressions: o.Expression[]): InterpolateStyleMapOp {
+    xref: XrefId, strings: string[], expressions: o.Expression[],
+    securityContext: SecurityContext): InterpolateStyleMapOp {
   return {
     kind: OpKind.InterpolateStyleMap,
     target: xref,
     strings,
     expressions,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,
@@ -550,18 +677,31 @@ export interface InterpolateClassMapOp extends Op<UpdateOp>, ConsumesVarsTrait,
    * Conceptually interwoven in between the `strings`.
    */
   expressions: o.Expression[];
+
+  /**
+   * The security context for this binding.
+   */
+  securityContext: SecurityContext;
+
+  /**
+   * The sanitizer function used to sanitize the bound value.
+   */
+  sanitizer: o.Expression|null;
 }
 
 /**
  * Create a `InterpolateStyleMap`.
  */
 export function createInterpolateClassMapOp(
-    xref: XrefId, strings: string[], expressions: o.Expression[]): InterpolateClassMapOp {
+    xref: XrefId, strings: string[], expressions: o.Expression[],
+    securityContext: SecurityContext): InterpolateClassMapOp {
   return {
     kind: OpKind.InterpolateClassMap,
     target: xref,
     strings,
     expressions,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,

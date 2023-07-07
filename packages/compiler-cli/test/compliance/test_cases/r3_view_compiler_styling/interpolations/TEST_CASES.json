@@ -39,8 +39,7 @@
           "failureMessage": "Incorrect handling of interpolated style properties",
           "files": ["style_binding_sanitizer.js"]
         }
-      ],
-      "skipForTemplatePipeline": true
+      ]
     },
     {
       "description": "should generate update instructions for interpolated style properties with !important",

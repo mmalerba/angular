@@ -33,6 +33,7 @@ import {phasePureLiteralStructures} from './phases/pure_literal_structures';
 import {phaseReify} from './phases/reify';
 import {phaseResolveContexts} from './phases/resolve_contexts';
 import {phaseResolveNames} from './phases/resolve_names';
+import {phaseResolveSanitizers} from './phases/resolve_sanitizers';
 import {phaseSaveRestoreView} from './phases/save_restore_view';
 import {phaseSlotAllocation} from './phases/slot_allocation';
 import {phaseTemporaryVariables} from './phases/temporary_variables';
@@ -54,6 +55,7 @@ export function transformTemplate(cpl: ComponentCompilation): void {
   phaseResolveDollarEvent(cpl);
   phaseResolveNames(cpl);
   phaseResolveContexts(cpl);
+  phaseResolveSanitizers(cpl);
   phaseLocalRefs(cpl);
   phaseConstCollection(cpl);
   phaseNullishCoalescing(cpl);

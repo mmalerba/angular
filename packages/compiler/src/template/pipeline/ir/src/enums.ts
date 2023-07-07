@@ -242,6 +242,11 @@ export enum ExpressionKind {
    * A reference to a temporary variable.
    */
   ReadTemporaryExpr,
+
+  /**
+   * An expression representing a sanitizer function.
+   */
+  SanitizerExpr,
 }
 
 /**

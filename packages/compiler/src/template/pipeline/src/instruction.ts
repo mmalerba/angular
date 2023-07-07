@@ -133,21 +133,33 @@ export function text(slot: number, initialValue: string): ir.CreateOp {
   return call(Identifiers.text, args);
 }
 
-export function property(name: string, expression: o.Expression): ir.UpdateOp {
-  return call(Identifiers.property, [
-    o.literal(name),
-    expression,
-  ]);
+export function property(
+    name: string, expression: o.Expression, sanitizer: o.Expression|null): ir.UpdateOp {
+  const args = [o.literal(name), expression];
+  if (sanitizer !== null) {
+    args.push(sanitizer);
+  }
+  return call(Identifiers.property, args);
 }
 
-export function attribute(name: string, expression: o.Expression): ir.UpdateOp {
-  return call(Identifiers.attribute, [o.literal(name), expression]);
+export function attribute(
+    name: string, expression: o.Expression, sanitizer: o.Expression|null): ir.UpdateOp {
+  const args = [o.literal(name), expression];
+  if (sanitizer !== null) {
+    args.push(sanitizer);
+  }
+  return call(Identifiers.attribute, args);
 }
 
-export function styleProp(name: string, expression: o.Expression, unit: string|null): ir.UpdateOp {
+export function styleProp(
+    name: string, expression: o.Expression, unit: string|null,
+    sanitizer: o.Expression|null): ir.UpdateOp {
   const args = [o.literal(name), expression];
   if (unit !== null) {
     args.push(o.literal(unit));
+  }
+  if (sanitizer !== null) {
+    args.push(sanitizer);
   }
   return call(Identifiers.styleProp, args);
 }
@@ -156,8 +168,12 @@ export function classProp(name: string, expression: o.Expression): ir.UpdateOp {
   return call(Identifiers.classProp, [o.literal(name), expression]);
 }
 
-export function styleMap(expression: o.Expression): ir.UpdateOp {
-  return call(Identifiers.styleMap, [expression]);
+export function styleMap(expression: o.Expression, sanitizer: o.Expression|null): ir.UpdateOp {
+  const args = [expression];
+  if (sanitizer !== null) {
+    args.push(sanitizer);
+  }
+  return call(Identifiers.styleMap, args);
 }
 
 export function classMap(expression: o.Expression): ir.UpdateOp {
@@ -215,36 +231,56 @@ export function textInterpolate(strings: string[], expressions: o.Expression[]):
 
 
 export function propertyInterpolate(
-    name: string, strings: string[], expressions: o.Expression[]): ir.UpdateOp {
+    name: string, strings: string[], expressions: o.Expression[],
+    sanitizer: o.Expression|null): ir.UpdateOp {
   const interpolationArgs = collateInterpolationArgs(strings, expressions);
+  const extraArgs = [];
+  if (sanitizer !== null) {
+    extraArgs.push(sanitizer);
+  }
 
-  return callVariadicInstruction(PROPERTY_INTERPOLATE_CONFIG, [o.literal(name)], interpolationArgs);
+  return callVariadicInstruction(
+      PROPERTY_INTERPOLATE_CONFIG, [o.literal(name)], interpolationArgs, extraArgs);
 }
 
 export function attributeInterpolate(
-    name: string, strings: string[], expressions: o.Expression[]): ir.UpdateOp {
+    name: string, strings: string[], expressions: o.Expression[],
+    sanitizer: o.Expression|null): ir.UpdateOp {
   const interpolationArgs = collateInterpolationArgs(strings, expressions);
+  const extraArgs = [];
+  if (sanitizer !== null) {
+    extraArgs.push(sanitizer);
+  }
 
   return callVariadicInstruction(
-      ATTRIBUTE_INTERPOLATE_CONFIG, [o.literal(name)], interpolationArgs);
+      ATTRIBUTE_INTERPOLATE_CONFIG, [o.literal(name)], interpolationArgs, extraArgs);
 }
 
 export function stylePropInterpolate(
-    name: string, strings: string[], expressions: o.Expression[], unit: string|null): ir.UpdateOp {
+    name: string, strings: string[], expressions: o.Expression[], unit: string|null,
+    sanitizer: o.Expression|null): ir.UpdateOp {
   const interpolationArgs = collateInterpolationArgs(strings, expressions);
   const extraArgs: o.Expression[] = [];
   if (unit !== null) {
     extraArgs.push(o.literal(unit));
+  }
+  if (sanitizer !== null) {
+    extraArgs.push(sanitizer);
   }
 
   return callVariadicInstruction(
       STYLE_PROP_INTERPOLATE_CONFIG, [o.literal(name)], interpolationArgs, extraArgs);
 }
 
-export function styleMapInterpolate(strings: string[], expressions: o.Expression[]): ir.UpdateOp {
+export function styleMapInterpolate(
+    strings: string[], expressions: o.Expression[], sanitizer: o.Expression|null): ir.UpdateOp {
   const interpolationArgs = collateInterpolationArgs(strings, expressions);
+  const extraArgs = [];
+  if (sanitizer !== null) {
+    extraArgs.push(sanitizer);
+  }
 
-  return callVariadicInstruction(STYLE_MAP_INTERPOLATE_CONFIG, [], interpolationArgs);
+  return callVariadicInstruction(STYLE_MAP_INTERPOLATE_CONFIG, [], interpolationArgs, extraArgs);
 }
 
 export function classMapInterpolate(strings: string[], expressions: o.Expression[]): ir.UpdateOp {
