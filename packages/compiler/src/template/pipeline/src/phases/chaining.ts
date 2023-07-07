@@ -28,6 +28,7 @@ const CHAINABLE = new Set([
   R3.stylePropInterpolate8,
   R3.stylePropInterpolateV,
   R3.classProp,
+  R3.listener,
   R3.elementContainerStart,
   R3.elementContainerEnd,
   R3.elementContainer,
