@@ -80,7 +80,7 @@ export class ElementAttributes {
     return this.byKind.get(ElementAttributeKind.I18n) ?? FLYWEIGHT_ARRAY;
   }
 
-  add(kind: ElementAttributeKind, name: string, value: o.Expression|null): void {
+  add(kind: ElementAttributeKind, name: string, value?: o.Expression): void {
     if (this.known.has(name)) {
       return;
     }
@@ -88,7 +88,7 @@ export class ElementAttributes {
     const array = this.arrayFor(kind);
     array.push(...getAttributeNameLiterals(name));
     if (kind === ElementAttributeKind.Attribute || kind === ElementAttributeKind.Style) {
-      if (value === null) {
+      if (value === undefined) {
         throw Error('Attribute & style element attributes must have a value');
       }
       array.push(value);

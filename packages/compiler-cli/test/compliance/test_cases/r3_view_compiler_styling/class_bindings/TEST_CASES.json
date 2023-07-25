@@ -19,8 +19,7 @@
           "failureMessage": "Incorrect template",
           "files": ["class_ordering.js"]
         }
-      ],
-      "skipForTemplatePipeline": true
+      ]
     },
     {
       "description": "should not generate the styling apply instruction if there are only static style/class attributes",

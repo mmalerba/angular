@@ -72,13 +72,13 @@ function populateElementAttributes(view: ViewCompilation, compatibility: boolean
         ownerOp = lookupElement(elements, op.target);
         ir.assertIsElementAttributes(ownerOp.attributes);
         removeIfExpressionIsEmpty(op, op.expression);
-        ownerOp.attributes.add(op.bindingKind, op.name, null);
+        ownerOp.attributes.add(op.bindingKind, op.name);
         break;
 
       case ir.OpKind.InterpolateProperty:
         ownerOp = lookupElement(elements, op.target);
         ir.assertIsElementAttributes(ownerOp.attributes);
-        ownerOp.attributes.add(op.bindingKind, op.name, null);
+        ownerOp.attributes.add(op.bindingKind, op.name);
         break;
 
       case ir.OpKind.StyleProp:
@@ -89,7 +89,7 @@ function populateElementAttributes(view: ViewCompilation, compatibility: boolean
         // The old compiler treated empty style bindings as regular bindings for the purpose of
         // directive matching. That behavior is incorrect, but we emulate it in compatibility mode.
         if (removeIfExpressionIsEmpty(op, op.expression) && compatibility) {
-          ownerOp.attributes.add(ir.ElementAttributeKind.Binding, op.name, null);
+          ownerOp.attributes.add(ir.ElementAttributeKind.Binding, op.name);
         }
         break;
 
@@ -100,7 +100,7 @@ function populateElementAttributes(view: ViewCompilation, compatibility: boolean
         ownerOp = lookupElement(elements, op.target);
         ir.assertIsElementAttributes(ownerOp.attributes);
 
-        ownerOp.attributes.add(ir.ElementAttributeKind.Binding, op.name, null);
+        ownerOp.attributes.add(ir.ElementAttributeKind.Binding, op.name);
 
         // We don't need to generate instructions for listeners on templates.
         if (ownerOp.kind === ir.OpKind.Template) {
@@ -122,7 +122,7 @@ function extractAttributeOp(
   ir.assertIsElementAttributes(ownerOp.attributes);
 
   if (op.name === 'style' && isStringLiteral(op.value)) {
-    // Don't extract `attr.style` bindinfs since they need to be sanitized.
+    // Don't extract `attr.style` bindings since they need to be sanitized.
     if (op.attributeKind === ir.ElementAttributeKind.Binding) {
       return;
     }
@@ -132,6 +132,19 @@ function extractAttributeOp(
     for (let i = 0; i < parsedStyles.length - 1; i += 2) {
       ownerOp.attributes.add(
           ir.ElementAttributeKind.Style, parsedStyles[i], o.literal(parsedStyles[i + 1]));
+    }
+    ir.OpList.remove(op as ir.UpdateOp);
+  } else if (op.name === 'class' && isStringLiteral(op.value)) {
+    // Don't extract `attr.class` bindings in compatibility mode, to match
+    // TemplateDefinitionBuilder.
+    if (compatibility && op.attributeKind === ir.ElementAttributeKind.Binding) {
+      return;
+    }
+
+    // Extract class attributes.
+    const parsedClasses = op.value.value.split(/\s+/g);
+    for (const parsedClass of parsedClasses) {
+      ownerOp.attributes.add(ir.ElementAttributeKind.Class, parsedClass);
     }
     ir.OpList.remove(op as ir.UpdateOp);
   } else {
