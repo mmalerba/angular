@@ -134,7 +134,8 @@ export function createPropertyOp(
  * Create a `PropertyOp` for an animation property.
  */
 export function createPropertyOpForAnimation(
-    xref: XrefId, name: string, expression: o.Expression): PropertyOp {
+    xref: XrefId, name: string, expression: o.Expression,
+    securityContext: SecurityContext): PropertyOp {
   return {
     kind: OpKind.Property,
     target: xref,
@@ -142,6 +143,8 @@ export function createPropertyOpForAnimation(
     name,
     expression,
     isAnimationTrigger: true,
+    securityContext,
+    sanitizer: null,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
     ...NEW_OP,

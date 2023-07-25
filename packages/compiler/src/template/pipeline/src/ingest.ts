@@ -365,7 +365,8 @@ function ingestPropertyBinding(
         if (bindingKind !== ir.ElementAttributeKind.Binding) {
           throw Error('Unexpected animation binding on ng-template');
         }
-        view.update.push(ir.createPropertyOpForAnimation(xref, name, convertAst(value, view.tpl)));
+        view.update.push(ir.createPropertyOpForAnimation(
+            xref, name, convertAst(value, view.tpl), securityContext));
         break;
       default:
         throw Error(`Property binding type not handled: ${type}`);
