@@ -9,7 +9,7 @@
 import {sanitizeIdentifier} from '../../../../parse_util';
 import {hyphenate} from '../../../../render3/view/style_parser';
 import * as ir from '../../ir';
-import {type CompilationJob, type CompilationUnit, ViewCompilationUnit} from '../compilation';
+import {ViewCompilationUnit, type CompilationJob, type CompilationUnit} from '../compilation';
 
 /**
  * Generate names for functions and variables across all views.
@@ -35,6 +35,11 @@ function addNamesToView(
 
   for (const op of unit.ops()) {
     switch (op.kind) {
+      case ir.OpKind.Property:
+        if (op.isAnimationTrigger) {
+          op.name = '@' + op.name;
+        }
+        break;
       case ir.OpKind.Listener:
         if (op.handlerFnName === null) {
           // TODO(alxhub): convert this temporary name to match how the
