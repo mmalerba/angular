@@ -44,6 +44,7 @@ import {phaseResolveNames} from './phases/resolve_names';
 import {phaseResolveSanitizers} from './phases/resolve_sanitizers';
 import {phaseSaveRestoreView} from './phases/save_restore_view';
 import {phaseSlotAllocation} from './phases/slot_allocation';
+import {phaseStaticStyleAttributeParsing} from './phases/static_style_attribute_parsing';
 import {phaseStyleBindingSpecialization} from './phases/style_binding_specialization';
 import {phaseTemporaryVariables} from './phases/temporary_variables';
 import {phaseVarCounting} from './phases/var_counting';
@@ -57,6 +58,7 @@ export function transformTemplate(job: ComponentCompilationJob): void {
   phaseNamespace(job);
   phaseStyleBindingSpecialization(job);
   phaseBindingSpecialization(job);
+  phaseStaticStyleAttributeParsing(job);
   phaseAttributeExtraction(job);
   phaseRemoveEmptyBindings(job);
   phaseNoListenersOnTemplates(job);

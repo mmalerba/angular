@@ -136,6 +136,16 @@ export enum OpKind {
   Attribute,
 
   /**
+   * A static `style` attribute.
+   */
+  ParsedStaticStyle,
+
+  /**
+   * A static `class` attribute.
+   */
+  ParsedStaticClass,
+
+  /**
    * A host binding property.
    */
   HostProperty,

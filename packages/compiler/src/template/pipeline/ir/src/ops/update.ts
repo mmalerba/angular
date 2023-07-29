@@ -21,9 +21,9 @@ import {ListEndOp, NEW_OP, StatementOp, VariableOp} from './shared';
 /**
  * An operation usable on the update side of the IR.
  */
-export type UpdateOp =
-    ListEndOp<UpdateOp>|StatementOp<UpdateOp>|PropertyOp|AttributeOp|StylePropOp|ClassPropOp|
-    StyleMapOp|ClassMapOp|InterpolateTextOp|AdvanceOp|VariableOp<UpdateOp>|BindingOp|HostPropertyOp;
+export type UpdateOp = ListEndOp<UpdateOp>|StatementOp<UpdateOp>|PropertyOp|AttributeOp|StylePropOp|
+    ClassPropOp|StyleMapOp|ClassMapOp|InterpolateTextOp|AdvanceOp|VariableOp<UpdateOp>|BindingOp|
+    HostPropertyOp|ParsedStaticStyleOp|ParsedStaticClassOp;
 
 /**
  * A logical operation to perform string interpolation on a text node.
@@ -103,6 +103,13 @@ export interface BindingOp extends Op<UpdateOp> {
   securityContext: SecurityContext;
 
   /**
+   * Whether the binding is a TextAttribute (e.g. `some-attr="some-value"`). This needs ot be
+   * tracked for compatiblity with `TemplateDefinitionBuilder` which treats `style` and `class`
+   * TextAttributes differently from `[attr.style]` and `[attr.class]`.
+   */
+  isTextAttribute: boolean;
+
+  /**
    * Whether this binding is on a template.
    */
   isTemplate: boolean;
@@ -115,8 +122,8 @@ export interface BindingOp extends Op<UpdateOp> {
  */
 export function createBindingOp(
     target: XrefId, kind: BindingKind, name: string, expression: o.Expression|Interpolation,
-    unit: string|null, securityContext: SecurityContext, isTemplate: boolean,
-    sourceSpan: ParseSourceSpan): BindingOp {
+    unit: string|null, securityContext: SecurityContext, isTextAttribute: boolean,
+    isTemplate: boolean, sourceSpan: ParseSourceSpan): BindingOp {
   return {
     kind: OpKind.Binding,
     bindingKind: kind,
@@ -125,6 +132,7 @@ export function createBindingOp(
     expression,
     unit,
     securityContext,
+    isTextAttribute,
     isTemplate,
     sourceSpan,
     ...NEW_OP,
@@ -387,6 +395,13 @@ export interface AttributeOp extends Op<UpdateOp> {
   sanitizer: o.Expression|null;
 
   /**
+   * Whether the binding is a TextAttribute (e.g. `some-attr="some-value"`). This needs ot be
+   * tracked for compatiblity with `TemplateDefinitionBuilder` which treats `style` and `class`
+   * TextAttributes differently from `[attr.style]` and `[attr.class]`.
+   */
+  isTextAttribute: boolean;
+
+  /**
    * Whether this binding is on a template.
    */
   isTemplate: boolean;
@@ -399,7 +414,7 @@ export interface AttributeOp extends Op<UpdateOp> {
  */
 export function createAttributeOp(
     target: XrefId, name: string, expression: o.Expression|Interpolation,
-    securityContext: SecurityContext, isTemplate: boolean,
+    securityContext: SecurityContext, isTextAttribute: boolean, isTemplate: boolean,
     sourceSpan: ParseSourceSpan): AttributeOp {
   return {
     kind: OpKind.Attribute,
@@ -408,10 +423,76 @@ export function createAttributeOp(
     expression,
     securityContext,
     sanitizer: null,
+    isTextAttribute,
     isTemplate,
     sourceSpan,
     ...TRAIT_DEPENDS_ON_SLOT_CONTEXT,
     ...TRAIT_CONSUMES_VARS,
+    ...NEW_OP,
+  };
+}
+
+/**
+ * Op for a style that has been parsed out of a static attribute.
+ */
+export interface ParsedStaticStyleOp extends Op<UpdateOp> {
+  kind: OpKind.ParsedStaticStyle;
+
+  /**
+   * The `XrefId` of the template-like element the attribute will belong to.
+   */
+  target: XrefId;
+
+  /**
+   * The name of the static style.
+   */
+  name: string;
+
+  /**
+   * The value of the static style.
+   */
+  value: string;
+}
+
+/**
+ * Creates a `ParsedStaticStyleOp`.
+ */
+export function createParsedStaticStyleOp(
+    target: XrefId, name: string, value: string): ParsedStaticStyleOp {
+  return {
+    kind: OpKind.ParsedStaticStyle,
+    target,
+    name,
+    value,
+    ...NEW_OP,
+  };
+}
+
+/**
+ * Op for a class that has been parsed out of a static attribute.
+ */
+export interface ParsedStaticClassOp extends Op<UpdateOp> {
+  kind: OpKind.ParsedStaticClass;
+
+  /**
+   * The `XrefId` of the template-like element the attribute will belong to.
+   */
+  target: XrefId;
+
+  /**
+   * The name of the static class.
+   */
+  name: string;
+}
+
+/**
+ * Creates a `ParsedStaticClassOp`.
+ */
+export function createParsedStaticClassOp(target: XrefId, name: string): ParsedStaticClassOp {
+  return {
+    kind: OpKind.ParsedStaticClass,
+    target,
+    name,
     ...NEW_OP,
   };
 }

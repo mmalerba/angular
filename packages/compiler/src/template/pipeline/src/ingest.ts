@@ -78,7 +78,7 @@ export function ingestHostProperty(
       job.root.xref, bindingKind, property.name, expression, null,
       SecurityContext
           .NONE /* TODO: what should we pass as security context? Passing NONE for now. */,
-      false, property.sourceSpan));
+      false, false, property.sourceSpan));
 }
 
 export function ingestHostEvent(job: HostBindingCompilationJob, event: e.ParsedEvent) {}
@@ -277,10 +277,10 @@ function ingestBindings(
       if (attr instanceof t.TextAttribute) {
         ingestBinding(
             view, op.xref, attr.name, o.literal(attr.value), e.BindingType.Attribute, null,
-            SecurityContext.NONE, attr.sourceSpan, true);
+            SecurityContext.NONE, true, attr.sourceSpan, true);
       } else {
         ingestBinding(
-            view, op.xref, attr.name, attr.value, attr.type, attr.unit, attr.securityContext,
+            view, op.xref, attr.name, attr.value, attr.type, attr.unit, attr.securityContext, false,
             attr.sourceSpan, true);
       }
     }
@@ -292,13 +292,13 @@ function ingestBindings(
     // `BindingType.Attribute`.
     ingestBinding(
         view, op.xref, attr.name, o.literal(attr.value), e.BindingType.Attribute, null,
-        SecurityContext.NONE, attr.sourceSpan, false);
+        SecurityContext.NONE, true, attr.sourceSpan, false);
   }
 
   for (const input of element.inputs) {
     ingestBinding(
         view, op.xref, input.name, input.value, input.type, input.unit, input.securityContext,
-        input.sourceSpan, false);
+        false, input.sourceSpan, false);
   }
 
   for (const output of element.outputs) {
@@ -352,7 +352,7 @@ const BINDING_KINDS = new Map<e.BindingType, ir.BindingKind>([
 function ingestBinding(
     view: ViewCompilationUnit, xref: ir.XrefId, name: string, value: e.AST|o.Expression,
     type: e.BindingType, unit: string|null, securityContext: SecurityContext,
-    sourceSpan: ParseSourceSpan, isTemplateBinding: boolean): void {
+    isTextAttribute: boolean, sourceSpan: ParseSourceSpan, isTemplateBinding: boolean): void {
   if (value instanceof e.ASTWithSource) {
     value = value.ast;
   }
@@ -369,7 +369,8 @@ function ingestBinding(
 
   const kind: ir.BindingKind = BINDING_KINDS.get(type)!;
   view.update.push(ir.createBindingOp(
-      xref, kind, name, expression, unit, securityContext, isTemplateBinding, sourceSpan));
+      xref, kind, name, expression, unit, securityContext, isTextAttribute, isTemplateBinding,
+      sourceSpan));
 }
 
 /**
