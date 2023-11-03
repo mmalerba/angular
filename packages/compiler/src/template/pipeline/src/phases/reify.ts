@@ -291,7 +291,7 @@ function reifyUpdateOperations(_unit: CompilationUnit, ops: ir.OpList<ir.UpdateO
         ir.OpList.replace(op, ng.i18nExp(op.expression, op.sourceSpan));
         break;
       case ir.OpKind.I18nApply:
-        ir.OpList.replace(op, ng.i18nApply(op.targetSlot.slot!, op.sourceSpan));
+        ir.OpList.replace(op, ng.i18nApply(op.i18nSlot.slot!, op.sourceSpan));
         break;
       case ir.OpKind.InterpolateText:
         ir.OpList.replace(

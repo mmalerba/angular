@@ -23,6 +23,7 @@ import {phaseCollapseSingletonInterpolations} from './phases/collapse_singleton_
 import {phaseConditionals} from './phases/conditionals';
 import {phaseConstCollection} from './phases/const_collection';
 import {createI18nContexts} from './phases/create_i18n_contexts';
+import {createI18nIcuExpressions} from './phases/create_i18n_icu_expressions';
 import {phaseDeferConfigs} from './phases/defer_configs';
 import {phaseDeferResolveTargets} from './phases/defer_resolve_targets';
 import {phaseEmptyElements} from './phases/empty_elements';
@@ -35,7 +36,6 @@ import {phaseConstExpressionCollection} from './phases/has_const_expression_coll
 import {phaseHostStylePropertyParsing} from './phases/host_style_property_parsing';
 import {phaseI18nConstCollection} from './phases/i18n_const_collection';
 import {phaseI18nTextExtraction} from './phases/i18n_text_extraction';
-import {phaseIcuExtraction} from './phases/icu_extraction';
 import {phaseLocalRefs} from './phases/local_refs';
 import {mergeI18nContexts} from './phases/merge_i18n_contexts';
 import {phaseNamespace} from './phases/namespace';
@@ -102,7 +102,7 @@ const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: phasePipeCreation},
   {kind: Kind.Tmpl, fn: phaseDeferConfigs},
   {kind: Kind.Tmpl, fn: phaseI18nTextExtraction},
-  {kind: Kind.Tmpl, fn: phaseIcuExtraction},
+  {kind: Kind.Tmpl, fn: createI18nIcuExpressions},
   {kind: Kind.Tmpl, fn: phaseApplyI18nExpressions},
   {kind: Kind.Tmpl, fn: phasePipeVariadic},
   {kind: Kind.Both, fn: phasePureLiteralStructures},
@@ -132,6 +132,7 @@ const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: phaseConstExpressionCollection},
   {kind: Kind.Both, fn: phaseConstCollection},
   {kind: Kind.Tmpl, fn: phaseAssignI18nSlotDependencies},
+  {kind: Kind.Tmpl, fn: removeI18nContexts},
   {kind: Kind.Both, fn: phaseVarCounting},
   {kind: Kind.Tmpl, fn: phaseGenerateAdvance},
   {kind: Kind.Both, fn: phaseVariableOptimization},
@@ -141,7 +142,6 @@ const phases: Phase[] = [
   {kind: Kind.Tmpl, fn: phaseEmptyElements},
   {kind: Kind.Tmpl, fn: phaseNonbindable},
   {kind: Kind.Both, fn: phasePureFunctionExtraction},
-  {kind: Kind.Tmpl, fn: removeI18nContexts},
   {kind: Kind.Both, fn: phaseReify},
   {kind: Kind.Both, fn: phaseChaining},
 ];
