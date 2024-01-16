@@ -28,6 +28,13 @@
           ]
         }
       ]
+    },
+    {
+      "description": "TGP issue",
+      "inputFiles": [
+        "q.ts"
+      ],
+      "focusTest": true
     }
   ]
 }
