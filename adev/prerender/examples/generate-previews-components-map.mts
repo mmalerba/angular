@@ -6,11 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import ts from 'typescript';
 import * as fs from 'fs';
-import {dirname, join, relative} from 'path';
-import {fileURLToPath} from 'url';
 import {readFile, writeFile} from 'fs/promises';
+import {dirname, join, relative} from 'path';
+import ts from 'typescript';
+import {fileURLToPath} from 'url';
 
 const TYPESCRIPT_EXTENSION = '.ts';
 const SKIP_FILES_WITH_EXTENSIONS = ['.e2e-spec.ts', '.spec.ts', '.po.ts'];
@@ -27,10 +27,7 @@ interface AnalyzedFiles {
 }
 
 /** Absolute disk path to the project directory. */
-const examplesDir = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../src/content/examples',
-);
+const examplesDir = join(dirname(fileURLToPath(import.meta.url)), '../../src/content/examples');
 const projectDir = join(dirname(fileURLToPath(import.meta.url)), '../../src');
 const previewsComponentMapFileName = 'previews.ts';
 
@@ -153,6 +150,9 @@ function generatePreviewsComponentMap(data: AnalyzedFiles[]): string {
     }
   }
   return fs
-    .readFileSync('scripts/examples/previews-components.template', 'utf8')
+    .readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'previews-components.template'),
+      'utf8',
+    )
     .replace(/\${previewsComponents}/g, result);
 }
