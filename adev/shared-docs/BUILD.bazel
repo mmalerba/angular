@@ -35,6 +35,7 @@ ng_package(
         "//adev/shared-docs/pipeline:playground.mjs",
         "//adev/shared-docs/pipeline:stackblitz.mjs",
         "//adev/shared-docs/pipeline:tutorial.mjs",
+        "//adev/shared-docs/pipeline/api-gen/extraction:extract_api_to_json.mjs",
         "//adev/shared-docs/pipeline/examples/template:files",
         "//adev/shared-docs/pipeline/tutorials/common:files",
         "//adev/shared-docs/styles",

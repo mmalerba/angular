@@ -11,9 +11,10 @@ esbuild_esm_bundle(
         "@angular/compiler-cli",
         "typescript",
     ],
-    output = "bin.mjs",
+    output = "extract_api_to_json.mjs",
     platform = "node",
     target = "es2022",
+    visibility = ["//visibility:public"],
     deps = [
         ":extract_api_to_json_lib",
         "@angular//packages/compiler-cli",
@@ -49,7 +50,7 @@ nodejs_binary(
         "@angular//packages/compiler-cli",
         "@npm//typescript",
     ],
-    entry_point = "bin.mjs",
+    entry_point = "extract_api_to_json.mjs",
     # Note: Using the linker here as we need it for ESM. The linker is not
     # super reliably when running concurrently on Windows- but we have existing
     # actions using the linker. An alternative would be to:
