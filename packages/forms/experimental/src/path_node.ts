@@ -1,5 +1,5 @@
 import {FieldPath} from './api/types';
-import {DYNAMIC, FieldLogicNode, Predicate} from './logic_node';
+import {DYNAMIC, LinkedLogicListNode, LinkedLogicNode, Predicate} from './logic_node';
 
 /**
  * Special key which is used to retrieve the `FieldPathNode` instance from its `FieldPath` proxy wrapper.
@@ -17,7 +17,7 @@ export class FieldPathNode {
 
   protected constructor(
     readonly keys: PropertyKey[],
-    readonly logic: FieldLogicNode,
+    readonly logic: LinkedLogicNode,
     root: FieldRootPathNode | undefined,
   ) {
     this.root = root ?? (this as unknown as FieldRootPathNode);
@@ -38,7 +38,7 @@ export class FieldPathNode {
   }
 
   mergeIn(other: FieldRootPathNode) {
-    this.logic.mergeIn(other.logic);
+    this.logic.linkTo(other.logic);
     for (const [root, pathKeys] of other.subroots) {
       this.root.subroots.set(root, [...this.keys, ...pathKeys]);
     }
@@ -53,7 +53,7 @@ export class FieldRootPathNode extends FieldPathNode {
   readonly subroots = new Map<FieldPathNode, PropertyKey[]>([[this, []]]);
 
   constructor(predicate: Predicate | undefined) {
-    super([], FieldLogicNode.newRoot(predicate), undefined);
+    super([], new LinkedLogicListNode(predicate), undefined);
   }
 }
 

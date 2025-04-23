@@ -1,8 +1,8 @@
 import {computed, signal} from '@angular/core';
 import {disabled, error, required, validate} from '../src/api/logic';
+import {DISABLED_REASON, REQUIRED} from '../src/api/metadata';
 import {apply, applyEach, form, submit} from '../src/api/structure';
 import {Schema} from '../src/api/types';
-import {DISABLED_REASON, REQUIRED} from '../src/api/metadata';
 
 describe('Node', () => {
   it('is untouched initially', () => {

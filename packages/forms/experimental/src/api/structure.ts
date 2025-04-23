@@ -56,7 +56,7 @@ export function form<T>(model: WritableSignal<T>, schema?: NoInfer<Schema<T>>): 
   if (schema !== undefined) {
     new SchemaImpl(schema).apply(pathNode);
   }
-  const fieldRoot = FieldNode.newRoot(model, pathNode);
+  const fieldRoot = FieldNode.newRoot(model, pathNode, pathNode.logic.merged());
   return fieldRoot.fieldProxy as Field<T>;
 }
 

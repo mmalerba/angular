@@ -20,28 +20,28 @@ export interface Predicate {
   readonly path: FieldPath<any>;
 }
 
-/**
- * Logic associated with a particular location (path) in a form.
- *
- * This can be logic associated with a specific field, or with all fields within in array or other
- * dynamic structure.
- */
-export class FieldLogicNode {
+export interface LogicContainer {
   readonly hidden: BooleanOrLogic;
   readonly disabled: BooleanOrLogic;
   readonly errors: ArrayMergeLogic<FormError>;
+  getMetadataKeys(): IterableIterator<MetadataKey<unknown>>;
+  getMetadata<T>(key: MetadataKey<T>): AbstractLogic<T>;
+}
 
+class LogicChunk implements LogicContainer {
+  readonly hidden: BooleanOrLogic;
+  readonly disabled: BooleanOrLogic;
+  readonly errors: ArrayMergeLogic<FormError>;
   private readonly metadata = new Map<MetadataKey<unknown>, AbstractLogic<unknown>>();
-  private readonly children = new Map<PropertyKey, FieldLogicNode>();
 
-  private constructor(private predicate: Predicate | undefined) {
+  constructor(private predicate: Predicate | undefined) {
     this.hidden = new BooleanOrLogic(predicate);
     this.disabled = new BooleanOrLogic(predicate);
     this.errors = new ArrayMergeLogic<FormError>(predicate);
   }
 
-  get element(): FieldLogicNode {
-    return this.getChild(DYNAMIC);
+  getMetadataKeys() {
+    return this.metadata.keys();
   }
 
   getMetadata<T>(key: MetadataKey<T>): AbstractLogic<T> {
@@ -58,37 +58,178 @@ export class FieldLogicNode {
       return key.defaultValue;
     }
   }
+}
 
-  /**
-   * Get or create a child `LogicNode` for the given property.
-   */
-  getChild(key: PropertyKey): FieldLogicNode {
+export interface LinkedLogicNode extends LogicContainer {
+  readonly element: LinkedLogicNode;
+  predicate: Predicate | undefined;
+  linkTo(other: LinkedLogicNode): void;
+  merged(): MergedLogicNode;
+  getChild(key: PropertyKey): LinkedLogicNode;
+  getAllChildren(key: PropertyKey): LinkedLogicNode[];
+}
+
+export class LinkedLogicChunkNode implements LinkedLogicNode {
+  readonly chunk: LogicChunk;
+  private readonly children = new Map<PropertyKey, LinkedLogicListNode>();
+
+  get hidden() {
+    return this.chunk.hidden;
+  }
+  get disabled() {
+    return this.chunk.disabled;
+  }
+  get errors() {
+    return this.chunk.errors;
+  }
+  get element() {
+    return this.getChild(DYNAMIC);
+  }
+
+  constructor(readonly predicate: Predicate | undefined) {
+    this.chunk = new LogicChunk(predicate);
+  }
+
+  getChild(key: PropertyKey) {
     if (!this.children.has(key)) {
-      this.children.set(key, new FieldLogicNode(this.predicate));
+      this.children.set(key, new LinkedLogicListNode(this.predicate));
     }
     return this.children.get(key)!;
   }
 
-  mergeIn(other: FieldLogicNode) {
-    // Merge standard logic.
-    this.hidden.mergeIn(other.hidden);
-    this.disabled.mergeIn(other.disabled);
-    this.errors.mergeIn(other.errors);
-
-    // Merge metadata.
-    for (const key of other.metadata.keys()) {
-      this.getMetadata(key).mergeIn(other.getMetadata(key));
+  getAllChildren(key: PropertyKey): LinkedLogicNode[] {
+    if (this.children.has(key)) {
+      return [this.children.get(key)!];
     }
+    return [];
+  }
 
-    // Merge children.
-    for (const [key, otherChild] of other.children) {
-      const child = this.getChild(key);
-      child.mergeIn(otherChild);
+  getMetadataKeys() {
+    return this.chunk.getMetadataKeys();
+  }
+
+  getMetadata<T>(key: MetadataKey<T>) {
+    return this.chunk.getMetadata(key);
+  }
+
+  linkTo(other: LinkedLogicNode): void {
+    throw new Error('LinkedLogicChunkNode cannot be linked to another node');
+  }
+
+  merged(): MergedLogicNode {
+    return new MergedLogicNode(this);
+  }
+}
+
+export class LinkedLogicListNode implements LinkedLogicNode {
+  private current: LinkedLogicChunkNode | undefined;
+  all: LinkedLogicNode[];
+
+  get hidden() {
+    return this.getCurrent().hidden;
+  }
+  get disabled() {
+    return this.getCurrent().disabled;
+  }
+  get errors() {
+    return this.getCurrent().errors;
+  }
+  get element() {
+    return this.getCurrent().element;
+  }
+
+  constructor(readonly predicate: Predicate | undefined) {
+    this.all = [];
+  }
+
+  private getCurrent() {
+    if (this.current === undefined) {
+      this.current = new LinkedLogicChunkNode(this.predicate);
+      this.all.push(this.current);
+    }
+    return this.current;
+  }
+
+  getChild(key: PropertyKey) {
+    return this.getCurrent().getChild(key);
+  }
+
+  getAllChildren(key: PropertyKey): LinkedLogicNode[] {
+    return this.all.flatMap((node) => node.getAllChildren(key));
+  }
+
+  getMetadataKeys() {
+    return new Set([...this.all.flatMap((node) => [...node.getMetadataKeys()])]).keys();
+  }
+
+  getMetadata<T>(key: MetadataKey<T>) {
+    return this.getCurrent().getMetadata(key);
+  }
+
+  linkTo(other: LinkedLogicNode) {
+    this.all.push(other);
+    this.current = undefined;
+  }
+
+  merged(): MergedLogicNode {
+    return new MergedLogicNode(this);
+  }
+}
+
+export class MergedLogicNode {
+  private readonly full: LogicChunk;
+
+  get hidden() {
+    return this.full.hidden;
+  }
+  get disabled() {
+    return this.full.disabled;
+  }
+  get errors() {
+    return this.full.errors;
+  }
+  get element() {
+    return this.getChild(DYNAMIC);
+  }
+
+  constructor(private linkedNode: LinkedLogicNode) {
+    this.full = new LogicChunk(linkedNode.predicate);
+    const chunks = linkedNode instanceof LinkedLogicListNode ? linkedNode.all : [linkedNode];
+    for (const chunk of chunks) {
+      this.full.disabled.mergeIn(chunk.disabled);
+      this.full.hidden.mergeIn(chunk.hidden);
+      this.full.errors.mergeIn(chunk.errors);
+      for (const key of chunk.getMetadataKeys()) {
+        this.full.getMetadata(key).mergeIn(chunk.getMetadata(key));
+      }
     }
   }
 
-  static newRoot(predicate: Predicate | undefined): FieldLogicNode {
-    return new FieldLogicNode(predicate);
+  getChild(key: PropertyKey): MergedLogicNode {
+    const children = this.linkedNode.getAllChildren(key);
+    if (children.length === 0) {
+      return new MergedLogicNode(new LinkedLogicChunkNode(undefined));
+    }
+    if (children.length === 1) {
+      return new MergedLogicNode(children[0]);
+    }
+    const all = new LinkedLogicListNode(this.linkedNode.predicate);
+    for (const child of children) {
+      all.linkTo(child);
+    }
+    return new MergedLogicNode(all);
+  }
+
+  getMetadataKeys() {
+    return this.full.getMetadataKeys();
+  }
+
+  getMetadata<T>(key: MetadataKey<T>): AbstractLogic<T> {
+    return this.full.getMetadata(key);
+  }
+
+  readMetadata<T>(key: MetadataKey<T>, arg: FieldContext<any>): T {
+    return this.full.readMetadata(key, arg);
   }
 }
 

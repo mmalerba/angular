@@ -17,7 +17,7 @@ import type {
   SubmittedStatus,
   ValidationResult,
 } from './api/types';
-import {DYNAMIC, FieldLogicNode} from './logic_node';
+import {DYNAMIC, MergedLogicNode} from './logic_node';
 import {FieldPathNode, FieldRootPathNode} from './path_node';
 import {deepSignal} from './util/deep_signal';
 
@@ -104,16 +104,13 @@ export class FieldNode implements FieldState<unknown> {
 
   private readonly pathKeys: PropertyKey[];
 
-  private logic: FieldLogicNode;
-
   private constructor(
     readonly value: WritableSignal<unknown>,
     private readonly logicPath: FieldPathNode,
+    private readonly logic: MergedLogicNode,
     readonly parent: FieldNode | undefined,
     readonly keyInParent: PropertyKey | undefined,
   ) {
-    this.logic = logicPath.logic;
-
     if (parent !== undefined && keyInParent !== undefined) {
       this.root = parent.root;
       this.pathKeys = [...parent.pathKeys, keyInParent];
@@ -324,26 +321,33 @@ export class FieldNode implements FieldState<unknown> {
 
       // Determine the logic for the field that we're defining.
       let childPath: FieldPathNode | undefined;
+      let childLogic: MergedLogicNode;
       if (Array.isArray(value)) {
         // Fields for array elements have their logic defined by the `element` mechanism.
         // TODO: other dynamic data
         childPath = this.logicPath.getChild(DYNAMIC);
+        childLogic = this.logic.element;
       } else {
         // Fields for plain properties exist in our logic node's child map.
         childPath = this.logicPath.getChild(key);
+        childLogic = this.logic.getChild(key);
       }
       childrenMap ??= new Map<PropertyKey, FieldNode>();
       childrenMap.set(
         key,
-        new FieldNode(deepSignal(this.value, key as never), childPath, this, key),
+        new FieldNode(deepSignal(this.value, key as never), childPath, childLogic, this, key),
       );
     }
 
     return childrenMap;
   }
 
-  static newRoot<T>(value: WritableSignal<T>, path: FieldPathNode): FieldNode {
-    return new FieldNode(value, path, undefined, undefined);
+  static newRoot<T>(
+    value: WritableSignal<T>,
+    path: FieldPathNode,
+    logic: MergedLogicNode,
+  ): FieldNode {
+    return new FieldNode(value, path, logic, undefined, undefined);
   }
 }
 
