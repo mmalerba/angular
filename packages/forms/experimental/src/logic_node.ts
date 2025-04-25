@@ -87,7 +87,7 @@ export class LinkedLogicChunkNode implements LinkedLogicNode {
   }
 
   constructor(readonly predicate: Predicate | undefined) {
-    this.chunk = new LogicChunk(predicate);
+    this.chunk = new LogicChunk(undefined);
   }
 
   getChild(key: PropertyKey) {
@@ -194,14 +194,25 @@ export class MergedLogicNode {
 
   constructor(private linkedNode: LinkedLogicNode) {
     this.full = new LogicChunk(linkedNode.predicate);
-    const chunks = linkedNode instanceof LinkedLogicListNode ? linkedNode.all : [linkedNode];
-    for (const chunk of chunks) {
-      this.full.disabled.mergeIn(chunk.disabled);
-      this.full.hidden.mergeIn(chunk.hidden);
-      this.full.errors.mergeIn(chunk.errors);
-      for (const key of chunk.getMetadataKeys()) {
-        this.full.getMetadata(key).mergeIn(chunk.getMetadata(key));
+    if (linkedNode instanceof LinkedLogicListNode) {
+      const mergedChunks = linkedNode.all.map((chunk) => chunk.merged());
+      for (const chunk of mergedChunks) {
+        this.full.disabled.mergeIn(chunk.disabled);
+        this.full.hidden.mergeIn(chunk.hidden);
+        this.full.errors.mergeIn(chunk.errors);
+        for (const key of chunk.getMetadataKeys()) {
+          this.full.getMetadata(key).mergeIn(chunk.getMetadata(key));
+        }
       }
+    } else if (linkedNode instanceof LinkedLogicChunkNode) {
+      this.full.disabled.mergeIn(linkedNode.disabled);
+      this.full.hidden.mergeIn(linkedNode.hidden);
+      this.full.errors.mergeIn(linkedNode.errors);
+      for (const key of linkedNode.getMetadataKeys()) {
+        this.full.getMetadata(key).mergeIn(linkedNode.getMetadata(key));
+      }
+    } else {
+      throw new Error('Unknown linked node type');
     }
   }
 
