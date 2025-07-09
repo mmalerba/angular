@@ -776,5 +776,10 @@ describe('Form Directives', () => {
       expect(controlNameDir.hasError('required')).toBe(formModel.hasError('required'));
       expect(controlNameDir.getError('required')).toBe(formModel.getError('required'));
     });
+
+    it('should do stuff', () => {
+      console.log('DEBUG - REMOVE THIS!');
+      expect(true).toBe(true);
+    });
   });
 });
