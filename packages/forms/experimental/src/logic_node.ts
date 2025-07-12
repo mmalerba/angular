@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {untracked} from '@angular/core';
@@ -84,10 +84,17 @@ export class BooleanOrLogic extends AbstractLogic<boolean> {
   }
 }
 
-export class ArrayMergeLogic<TElement> extends AbstractLogic<
+export class ArrayMergeIgnoreLogic<TElement, TIgnore = never> extends AbstractLogic<
   readonly TElement[],
-  TElement | readonly TElement[] | undefined
+  TElement | readonly (TElement | TIgnore)[] | TIgnore | undefined
 > {
+  constructor(
+    predicates: ReadonlyArray<BoundPredicate>,
+    private ignore: undefined | ((e: TElement | undefined | TIgnore) => e is TIgnore),
+  ) {
+    super(predicates);
+  }
+
   override get defaultValue() {
     return undefined;
   }
@@ -99,11 +106,20 @@ export class ArrayMergeLogic<TElement> extends AbstractLogic<
       if (value === undefined) {
         return prev;
       } else if (Array.isArray(value)) {
-        return [...prev, ...value];
+        return [...prev, ...(this.ignore ? value.filter((e) => !this.ignore!(e)) : value)];
       } else {
+        if (this.ignore && this.ignore(value as TElement | TIgnore | undefined)) {
+          return prev;
+        }
         return [...prev, value];
       }
     }, [] as TElement[]);
+  }
+}
+
+export class ArrayMergeLogic<TElement> extends ArrayMergeIgnoreLogic<TElement, never> {
+  constructor(predicates: ReadonlyArray<BoundPredicate>) {
+    super(predicates, undefined);
   }
 }
 
