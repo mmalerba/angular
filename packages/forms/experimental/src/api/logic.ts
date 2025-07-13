@@ -90,11 +90,33 @@ export function hidden<TValue, TPathKind extends PathKind = PathKind.Root>(
 export function validate<TValue, TPathKind extends PathKind = PathKind.Root>(
   path: FieldPath<TValue, TPathKind>,
   logic: NoInfer<Validator<TValue, TPathKind>>,
+): void;
+export function validate<TValue, TPathKind extends PathKind = PathKind.Root>(
+  path: FieldPath<TValue, TPathKind>,
+  valid: NoInfer<LogicFn<TValue, boolean | null | undefined, TPathKind>>,
+  error?:
+    | ValidationError
+    | ValidationError[]
+    | LogicFn<TValue, ValidationError | ValidationError[], TPathKind>,
+): void;
+export function validate<TValue, TPathKind extends PathKind = PathKind.Root>(
+  path: FieldPath<TValue, TPathKind>,
+  ...fns: any[]
 ): void {
   assertPathIsCurrent(path);
 
+  let logic: Validator<TValue>;
+  if (fns.length === 1) {
+    logic = fns[0];
+  } else {
+    const [valid, error] = fns as [
+      LogicFn<TValue, boolean>,
+      LogicFn<TValue, ValidationError | ValidationError[]>,
+    ];
+    logic = (ctx) => (valid(ctx) ? error(ctx) : undefined);
+  }
   const pathNode = FieldPathNode.unwrapFieldPath(path);
-  pathNode.logic.addSyncErrorRule(logic as Validator<TValue>);
+  pathNode.logic.addSyncErrorRule(logic);
 }
 
 export function validateTree<TValue, TPathKind extends PathKind = PathKind.Root>(

@@ -35,8 +35,8 @@ export function minLength<TPathKind extends PathKind = PathKind.Root>(
     }
 
     if (ctx.value().length < value) {
-      if (config?.errors) {
-        return config.errors(ctx);
+      if (config?.error) {
+        return typeof config.error === 'function' ? config.error(ctx) : config.error;
       } else {
         return ValidationError.minlength(value);
       }

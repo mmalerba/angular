@@ -34,8 +34,8 @@ export function min<TPathKind extends PathKind = PathKind.Root>(
     }
 
     if (ctx.value() < value) {
-      if (config?.errors) {
-        return config.errors(ctx);
+      if (config?.error) {
+        return typeof config.error === 'function' ? config.error(ctx) : config.error;
       } else {
         return ValidationError.min(value);
       }

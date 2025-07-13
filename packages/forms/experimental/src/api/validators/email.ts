@@ -56,8 +56,8 @@ export function email<TPathKind extends PathKind = PathKind.Root>(
 ) {
   return validate(path, (ctx) => {
     if (!EMAIL_REGEXP.test(ctx.value())) {
-      if (config?.errors) {
-        return config.errors(ctx);
+      if (config?.error) {
+        return typeof config.error === 'function' ? config.error(ctx) : config.error;
       } else {
         return ValidationError.email();
       }

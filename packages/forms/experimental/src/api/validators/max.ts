@@ -35,8 +35,8 @@ export function max<TPathKind extends PathKind = PathKind.Root>(
       return undefined;
     }
     if (ctx.value() > value) {
-      if (config?.errors) {
-        return config.errors(ctx);
+      if (config?.error) {
+        return typeof config.error === 'function' ? config.error(ctx) : config.error;
       } else {
         return ValidationError.max(value);
       }

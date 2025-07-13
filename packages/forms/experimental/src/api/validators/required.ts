@@ -37,8 +37,8 @@ export function required<TValue, TPathKind extends PathKind = PathKind.Root>(
   metadata(path, REQUIRED, condition);
   validate(path, (ctx) => {
     if (condition(ctx) && emptyPredicate(ctx.value())) {
-      if (config?.errors) {
-        return config.errors(ctx);
+      if (config?.error) {
+        return typeof config.error === 'function' ? config.error(ctx) : config.error;
       } else {
         return ValidationError.required();
       }
