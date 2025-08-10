@@ -128,11 +128,7 @@ describe('reccursive schema logic', () => {
     expect(f().valid()).toBe(true);
   });
 
-  // TODO: debug issue demonstrated below. Seems to be some issue with recursive logic & potentially undefined fields.
-  // These two tests represent the same logic, but one has a potentially undefined field (which throws an error),
-  // and the other has a potentially null field (which is fine)
-
-  fit('should support recursive logic with applyWhen (undefined)', () => {
+  it('should support recursive logic with applyWhen (undefined)', () => {
     interface TreeNode {
       data: string;
       child: TreeNode | undefined;
@@ -156,7 +152,7 @@ describe('reccursive schema logic', () => {
     expect(f.child?.data().errors()).toEqual([ValidationError.required()]);
   });
 
-  fit('should support recursive logic with applyWhen (null)', () => {
+  it('should support recursive logic with applyWhen (null)', () => {
     interface TreeNode {
       data: string;
       child: TreeNode | null;

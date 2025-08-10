@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 
 import {Injector, signal} from '@angular/core';
@@ -13,13 +13,13 @@ import {form} from '../../public_api';
 const noop = () => {};
 
 describe('dynamic data patterns', () => {
-  it('returns `undefined` for declared fields with an undefined value', () => {
-    const model = signal({data: undefined as string | undefined});
+  it('should create a field for property with `undefined` value', () => {
+    const model = signal({data: undefined});
     const f = form(model, noop, {injector: TestBed.inject(Injector)});
-    expect(f.data).toBe(undefined);
+    expect(f.data).not.toBe(undefined);
 
-    // @ts-expect-error: 2722
-    expect(() => f.data()).toThrow();
+    // TODO: Typing is wrong
+    expect((f.data as any)().value()).toBe(undefined);
   });
 
   it('supports non-null assertions for declared fields with a potentially undefined value', () => {

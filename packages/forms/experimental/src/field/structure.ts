@@ -387,11 +387,9 @@ function makeChildrenMapSignal(
         let trackingId: TrackingKey | undefined = undefined;
         const childValue = value[key] as unknown;
 
-        // Fields explicitly set to `undefined` are treated as if they don't exist.
-        // This ensures that `{value: undefined}` and `{}` have the same behavior for their `value`
-        // field.
-        if (childValue === undefined) {
-          // The value might have _become_ `undefined`, so we need to delete it here.
+        // If the key is not present in the value, we treat the field as if it does not exist.
+        if (!(key in value)) {
+          // The key might have been previously present and removed, so we need to delete it here.
           childrenMap?.delete(key as TrackingKey);
           continue;
         }
