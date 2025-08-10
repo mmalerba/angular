@@ -149,7 +149,13 @@ describe('reccursive schema logic', () => {
 
     const f = form(name, s, {injector: TestBed.inject(Injector)});
     expect(f.data().errors()).toEqual([ValidationError.required()]);
-    expect(f.child?.data().errors()).toEqual([ValidationError.required()]);
+    // TODO: Now I can't actually access the errors on f.child.data, because we don't know if the
+    // `.data` field actally exists. It _might_, if child is a `TreeNode`, but it doesn't if child
+    // is an `undefined`. This is a general problem for any union of objects with different shape.
+    // Our system is currently designed around the staructure of objects being static, so this type
+    // of union doesn't even make sense in our current system.
+    // If I really want to access it I'd have to cast the field:
+    expect((f.child as Field<TreeNode>).data().errors()).toEqual([ValidationError.required()]);
   });
 
   it('should support recursive logic with applyWhen (null)', () => {

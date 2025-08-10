@@ -159,10 +159,23 @@ export type Field<TValue, TKey extends string | number = string | number> = (() 
  * @template TValue The type of the data which the parent field is wrapped around.
  */
 export type Subfields<TValue> = {
-  readonly [K in keyof TValue as TValue[K] extends Function ? never : K]: MaybeField<
+  readonly [K in RequiredKeys<TValue> as TValue[K] extends Function ? never : K]: Field<
     TValue[K],
     string
   >;
+} & {
+  readonly [K in OptionalKeys<TValue> as TValue[K] extends Function ? never : K]: MaybeField<
+    TValue[K],
+    string
+  >;
+};
+
+export type RequiredKeys<T> = keyof {
+  [K in keyof T as T extends Record<K, T[K]> ? K : never]: K;
+};
+
+export type OptionalKeys<T> = keyof {
+  [K in keyof T as T extends Record<K, T[K]> ? never : K]: K;
 };
 
 /**
@@ -187,7 +200,11 @@ export type ReadonlyArrayLike<T> = Pick<
  */
 export type MaybeField<TValue, TKey extends string | number = string | number> =
   | (TValue & undefined)
-  | Field<Exclude<TValue, undefined>, TKey>;
+  // We can't actually say that the field's value is not undefined, because an optional property
+  // type *does* allow passing an object with that property explicitly set to undefined:
+  // `const obj: {something?: string} = {something: undefined}`
+  // In which case the field for the property would exist and would have an undefined value
+  | Field<TValue, TKey>;
 
 /**
  * Contains all of the state (e.g. value, statuses, etc.) associated with a `Field`, exposed as

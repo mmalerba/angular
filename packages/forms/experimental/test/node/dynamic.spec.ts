@@ -17,20 +17,15 @@ describe('dynamic data patterns', () => {
     const model = signal({data: undefined});
     const f = form(model, noop, {injector: TestBed.inject(Injector)});
     expect(f.data).not.toBe(undefined);
-
-    // TODO: Typing is wrong
-    expect((f.data as any)().value()).toBe(undefined);
+    expect(f.data().value()).toBe(undefined);
   });
 
-  it('supports non-null assertions for declared fields with a potentially undefined value', () => {
-    const model = signal({data: 'test' as string | undefined});
+  it('supports non-null assertions for declared fields with an optional property', () => {
+    const model = signal<{data?: string}>({data: 'test'});
     const f = form(model, noop, {injector: TestBed.inject(Injector)});
 
     expect(f.data).not.toBeUndefined();
     expect(f.data!().value()).toBe('test');
-
-    // Asserts that the type of `value()` is indeed `string` and excludes `undefined`.
-    let value: string = f.data!().value();
   });
 
   describe('tracking', () => {
