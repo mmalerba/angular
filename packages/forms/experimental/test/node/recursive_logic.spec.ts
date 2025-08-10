@@ -10,14 +10,26 @@ import {Injector, signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {disabled, validate} from '../../src/api/logic';
 import {MIN} from '../../src/api/property';
-import {apply, applyEach, applyWhen, form, schema} from '../../src/api/structure';
-import type {Field, Schema} from '../../src/api/types';
+import {
+  apply,
+  applyEach,
+  applyWhen,
+  applyWhenValue,
+  form,
+  narrowed,
+  schema,
+} from '../../src/api/structure';
+import type {Schema} from '../../src/api/types';
 import {ValidationError} from '../../src/api/validation_errors';
 import {min, required} from '../../src/api/validators';
 
 interface TreeData {
   level: number;
   next: TreeData;
+}
+
+function isDefined<T>(value: T | undefined): value is Exclude<T, undefined> {
+  return value !== undefined;
 }
 
 describe('reccursive schema logic', () => {
@@ -128,7 +140,7 @@ describe('reccursive schema logic', () => {
     expect(f().valid()).toBe(true);
   });
 
-  it('should support recursive logic with applyWhen (undefined)', () => {
+  it('should support recursive logic using applyWhenValue with possibly undefined value', () => {
     interface TreeNode {
       data: string;
       child: TreeNode | undefined;
@@ -144,41 +156,12 @@ describe('reccursive schema logic', () => {
 
     const s = schema<TreeNode>((p) => {
       required(p.data);
-      applyWhen(p.child, ({value}) => value() !== undefined, s as Schema<TreeNode | undefined>);
+      applyWhenValue(p.child, isDefined, s);
     });
 
     const f = form(name, s, {injector: TestBed.inject(Injector)});
     expect(f.data().errors()).toEqual([ValidationError.required()]);
-    // TODO: Now I can't actually access the errors on f.child.data, because we don't know if the
-    // `.data` field actally exists. It _might_, if child is a `TreeNode`, but it doesn't if child
-    // is an `undefined`. This is a general problem for any union of objects with different shape.
-    // Our system is currently designed around the staructure of objects being static, so this type
-    // of union doesn't even make sense in our current system.
-    // If I really want to access it I'd have to cast the field:
-    expect((f.child as Field<TreeNode>).data().errors()).toEqual([ValidationError.required()]);
-  });
-
-  it('should support recursive logic with applyWhen (null)', () => {
-    interface TreeNode {
-      data: string;
-      child: TreeNode | null;
-    }
-
-    const name = signal<TreeNode>({
-      data: '',
-      child: {
-        data: '',
-        child: null,
-      },
-    });
-
-    const s = schema<TreeNode>((p) => {
-      required(p.data);
-      applyWhen(p.child, ({value}) => value() !== null, s as Schema<TreeNode | null>);
-    });
-
-    const f = form(name, s, {injector: TestBed.inject(Injector)});
-    expect(f.data().errors()).toEqual([ValidationError.required()]);
-    expect((f.child as Field<TreeNode>).data().errors()).toEqual([ValidationError.required()]);
+    const childNode = narrowed(f.child, isDefined);
+    expect(childNode()?.data().errors()).toEqual([ValidationError.required()]);
   });
 });

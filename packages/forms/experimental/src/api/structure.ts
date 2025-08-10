@@ -6,7 +6,14 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {inject, Injector, runInInjectionContext, WritableSignal} from '@angular/core';
+import {
+  computed,
+  inject,
+  Injector,
+  runInInjectionContext,
+  WritableSignal,
+  type Signal,
+} from '@angular/core';
 
 import {FormFieldManager} from '../field/manager';
 import {FieldNode} from '../field/node';
@@ -282,7 +289,7 @@ export function applyWhen<TValue>(
 export function applyWhenValue<TValue, TNarrowed extends TValue>(
   path: FieldPath<TValue>,
   predicate: (value: TValue) => value is TNarrowed,
-  schema: NoInfer<SchemaOrSchemaFn<TNarrowed>>,
+  schema: SchemaOrSchemaFn<TNarrowed>,
 ): void;
 
 /**
@@ -398,4 +405,11 @@ function markAllAsTouched(node: FieldNode) {
   for (const child of node.structure.children()) {
     markAllAsTouched(child);
   }
+}
+
+export function narrowed<TValue, TNarrowed extends TValue>(
+  field: Field<TValue>,
+  guard: (value: TValue) => value is TNarrowed,
+): Signal<Field<TNarrowed> | undefined> {
+  return computed(() => (guard(field().value()) ? (field as Field<TNarrowed>) : undefined));
 }
