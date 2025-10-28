@@ -84,7 +84,7 @@ export class Field<T> implements ɵControl<T> {
 
   ɵinteropControlCreate() {
     const controlValueAccessor = this.controlValueAccessor!;
-    controlValueAccessor.registerOnChange((value: T) => {
+    controlValueAccessor.registerOnChange((value: Exclude<T, undefined>) => {
       const state = this.state();
       state.value.set(value);
       state.markAsDirty();

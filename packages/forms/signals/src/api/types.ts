@@ -157,7 +157,7 @@ export type AsyncValidationResult<E extends ValidationError = ValidationError> =
  */
 export type FieldTree<TValue, TKey extends string | number = string | number> =
   | (TValue & undefined)
-  | ((() => FieldState<TValue, TKey>) &
+  | ((() => FieldState<Exclude<TValue, undefined>, TKey>) &
       (TValue extends Array<infer U>
         ? ReadonlyArrayLike<FieldTree<U, number>>
         : TValue extends Record<string, any>

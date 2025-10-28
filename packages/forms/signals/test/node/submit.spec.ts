@@ -18,6 +18,7 @@ import {
   ValidationError,
 } from '../../public_api';
 
+// Now there's all kinds of stuff here that's upset.
 describe('submit', () => {
   it('fails fast on invalid form', async () => {
     const data = signal({first: '', last: ''});
