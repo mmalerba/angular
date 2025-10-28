@@ -59,7 +59,7 @@ export const FIELD = new InjectionToken<Field<unknown>>(
 export class Field<T> implements ɵControl<T> {
   private readonly injector = inject(Injector);
   readonly field = input.required<FieldTree<T>>();
-  readonly state = computed(() => this.field()());
+  readonly state = computed(() => this.field()!());
   readonly [ɵCONTROL] = undefined;
 
   /** Any `ControlValueAccessor` instances provided on the host element. */

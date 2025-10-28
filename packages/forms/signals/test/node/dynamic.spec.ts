@@ -30,6 +30,7 @@ describe('dynamic data patterns', () => {
     expect(f.data!().value()).toBe('test');
 
     // Asserts that the type of `value()` is indeed `string` and excludes `undefined`.
+    // `f.data!().value` is a WritableSignal<string | undefined>`, because I haven't added the `Exclude<TValue, undefined>` yet.
     let value: string = f.data!().value();
   });
 

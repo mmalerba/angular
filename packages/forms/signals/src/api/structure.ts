@@ -395,7 +395,7 @@ export async function submit<TValue>(
   form: FieldTree<TValue>,
   action: (form: FieldTree<TValue>) => Promise<TreeValidationResult>,
 ) {
-  const node = form() as FieldNode;
+  const node = form!() as FieldNode;
   markAllAsTouched(node);
 
   // Fail fast if the form is already invalid.
@@ -428,7 +428,7 @@ function setServerErrors(
   const errorsByField = new Map<FieldNode, ValidationErrorWithField[]>();
   for (const error of errors) {
     const errorWithField = addDefaultField(error, submittedField.fieldProxy);
-    const field = errorWithField.field() as FieldNode;
+    const field = errorWithField.field!() as FieldNode;
     let fieldErrors = errorsByField.get(field);
     if (!fieldErrors) {
       fieldErrors = [];

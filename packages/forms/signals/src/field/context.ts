@@ -108,6 +108,6 @@ export class FieldNodeContext implements FieldContext<unknown> {
   });
 
   readonly fieldOf = <P>(p: FieldPath<P>) => this.resolve(p);
-  readonly stateOf = <P>(p: FieldPath<P>) => this.resolve(p)();
-  readonly valueOf = <P>(p: FieldPath<P>) => this.resolve(p)().value();
+  readonly stateOf = <P>(p: FieldPath<P>) => this.resolve(p)!();
+  readonly valueOf = <P>(p: FieldPath<P>) => this.resolve(p)!().value();
 }

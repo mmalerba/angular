@@ -25,7 +25,7 @@ function testContext<T>(
       });
     });
 
-    f().errors();
+    f!().errors();
   });
 
   expect(isCalled).toHaveBeenCalled();

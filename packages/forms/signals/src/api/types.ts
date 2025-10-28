@@ -155,15 +155,14 @@ export type AsyncValidationResult<E extends ValidationError = ValidationError> =
  * @category types
  * @experimental 21.0.0
  */
-export type FieldTree<TValue, TKey extends string | number = string | number> = (() => FieldState<
-  TValue,
-  TKey
->) &
-  (TValue extends Array<infer U>
-    ? ReadonlyArrayLike<MaybeFieldTree<U, number>>
-    : TValue extends Record<string, any>
-      ? Subfields<TValue>
-      : unknown);
+export type FieldTree<TValue, TKey extends string | number = string | number> =
+  | (TValue & undefined)
+  | ((() => FieldState<TValue, TKey>) &
+      (TValue extends Array<infer U>
+        ? ReadonlyArrayLike<FieldTree<U, number>>
+        : TValue extends Record<string, any>
+          ? Subfields<TValue>
+          : unknown));
 
 /**
  * The sub-fields that a user can navigate to from a `FieldTree<TValue>`.
@@ -173,7 +172,7 @@ export type FieldTree<TValue, TKey extends string | number = string | number> = 
  * @experimental 21.0.0
  */
 export type Subfields<TValue> = {
-  readonly [K in keyof TValue as TValue[K] extends Function ? never : K]: MaybeFieldTree<
+  readonly [K in keyof TValue as TValue[K] extends Function ? never : K]: FieldTree<
     TValue[K],
     string
   >;
@@ -190,22 +189,6 @@ export type ReadonlyArrayLike<T> = Pick<
   ReadonlyArray<T>,
   number | 'length' | typeof Symbol.iterator
 >;
-
-/**
- * Helper type for defining `FieldTree`. Given a type `TValue` that may include `undefined`, it extracts
- * the `undefined` outside the `FieldTree` type.
- *
- * For example `MaybeField<{a: number} | undefined, TKey>` would be equivalent to
- * `undefined | FieldTree<{a: number}, TKey>`.
- *
- * @template TValue The type of the data which the field is wrapped around.
- * @template TKey The type of the property key which this field resides under in its parent.
- *
- * @experimental 21.0.0
- */
-export type MaybeFieldTree<TValue, TKey extends string | number = string | number> =
-  | (TValue & undefined)
-  | FieldTree<Exclude<TValue, undefined>, TKey>;
 
 /**
  * Contains all of the state (e.g. value, statuses, etc.) associated with a `FieldTree`, exposed as
