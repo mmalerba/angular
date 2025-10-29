@@ -482,6 +482,8 @@ export interface RootFieldContext<TValue> {
   readonly stateOf: <P>(p: FieldPath<P>) => FieldState<P>;
   /** Gets the field represented by the given path. */
   readonly fieldOf: <P>(p: FieldPath<P>) => FieldTree<P>;
+  /** The list of keys that lead from the root field to the current field. */
+  readonly pathKeys: Signal<readonly string[]>;
 }
 
 /**
