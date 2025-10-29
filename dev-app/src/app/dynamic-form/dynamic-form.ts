@@ -1,0 +1,112 @@
+import {Component, computed, effect, input, linkedSignal, output} from '@angular/core';
+import {Field, form, type FieldTree} from '@angular/forms/signals';
+import {MatError, MatFormField, MatLabel} from '@angular/material/form-field';
+import {MatInput} from '@angular/material/input';
+import {computeDataModel, computeStructuredData, isArrayForm, type DynamicDataModel} from './model';
+import {createSchema, LABEL, type FieldSpec} from './spec';
+
+@Component({
+  selector: 'dynamic-form-terminal',
+  standalone: true,
+  imports: [Field, MatFormField, MatInput, MatError, MatLabel],
+  template: `
+    <mat-form-field>
+      <mat-label>{{ field()().metadata(LABEL)() }}</mat-label>
+      <input matInput [field]="field()" />
+      @for (error of field()().errors(); track $index) {
+        <mat-error>{{ error.message ?? error.kind }}</mat-error>
+      }
+    </mat-form-field>
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
+})
+export class DynamicFormTerminal {
+  field = input.required<FieldTree<{} | null>>();
+
+  LABEL = LABEL;
+}
+
+@Component({
+  selector: 'dynamic-form-group',
+  standalone: true,
+  imports: [DynamicFormTerminal],
+  template: `
+    <p>{{ field()().metadata(LABEL)() }}</p>
+    @for (child of field(); track child) {
+      @if (isArrayForm(child)) {
+        <dynamic-form-group [field]="child" />
+      } @else {
+        <dynamic-form-terminal [field]="child" />
+      }
+    }
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+        border-left: 2px solid black;
+        padding-left: 10px;
+      }
+    `,
+  ],
+})
+export class DynamicFormGroup {
+  field = input.required<FieldTree<({} | null)[]>>();
+
+  LABEL = LABEL;
+  isArrayForm = isArrayForm;
+}
+
+@Component({
+  selector: 'dynamic-form',
+  standalone: true,
+  imports: [DynamicFormTerminal, DynamicFormGroup],
+  template: `
+    @if (isArrayForm(form)) {
+      <dynamic-form-group [field]="form" />
+    } @else {
+      <dynamic-form-terminal [field]="form" />
+    }
+  `,
+  styles: [
+    `
+      :host {
+        display: block;
+        margin: 10px;
+      }
+    `,
+  ],
+})
+export class DynamicForm {
+  spec = input.required<FieldSpec>();
+
+  valueChange = output<unknown>();
+
+  model = linkedSignal<FieldSpec, DynamicDataModel>({
+    source: this.spec,
+    computation: computeDataModel,
+  });
+
+  // 🔪 Need to use explicit `{} | null` to avoid infinite recursion in the type system
+  form = form<{} | null>(this.model, createSchema(this.spec));
+
+  // 🔪 Need a computed on top of our form to get the model structured nicely
+  structured = computed(() => computeStructuredData(this.form));
+
+  isArrayForm = isArrayForm;
+
+  constructor() {
+    effect(() => {
+      this.valueChange.emit(this.structured());
+    });
+    effect(() => {
+      console.log(this.model());
+    });
+  }
+}
