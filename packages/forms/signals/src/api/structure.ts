@@ -12,12 +12,14 @@ import {BasicFieldAdapter, FieldAdapter} from '../field/field_adapter';
 import {FormFieldManager} from '../field/manager';
 import {FieldNode} from '../field/node';
 import {addDefaultField} from '../field/validation';
+import {DYNAMIC} from '../schema/logic';
 import {FieldPathNode} from '../schema/path_node';
 import {assertPathIsCurrent, isSchemaOrSchemaFn, SchemaImpl} from '../schema/schema';
 import {isArray} from '../util/type_guards';
 import type {
   FieldPath,
   FieldTree,
+  ItemType,
   LogicFn,
   OneOrMany,
   PathKind,
@@ -249,13 +251,21 @@ export function form<TValue>(...args: any[]): FieldTree<TValue> {
  * @category structure
  * @experimental 21.0.0
  */
-export function applyEach<TValue>(
-  path: FieldPath<TValue[]>,
-  schema: NoInfer<SchemaOrSchemaFn<TValue, PathKind.Item>>,
+export function applyEach<TValue extends ReadonlyArray<any>>(
+  path: FieldPath<TValue>,
+  schema: NoInfer<SchemaOrSchemaFn<TValue[number], PathKind.Item>>,
+): void;
+export function applyEach<TValue extends Object>(
+  path: FieldPath<TValue>,
+  schema: NoInfer<SchemaOrSchemaFn<ItemType<TValue>, PathKind.Child>>,
+): void;
+export function applyEach<TValue extends Object>(
+  path: FieldPath<TValue>,
+  schema: NoInfer<SchemaOrSchemaFn<ItemType<TValue>, PathKind.Item>>,
 ): void {
   assertPathIsCurrent(path);
 
-  const elementPath = FieldPathNode.unwrapFieldPath(path).element.fieldPathProxy;
+  const elementPath = FieldPathNode.unwrapFieldPath(path).getChild(DYNAMIC).fieldPathProxy;
   apply(elementPath, schema as Schema<TValue>);
 }
 

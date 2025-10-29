@@ -504,3 +504,12 @@ export interface ItemFieldContext<TValue> extends ChildFieldContext<TValue> {
   /** The index of the current field in its parent field. */
   readonly index: Signal<number>;
 }
+
+/**
+ * Gets the item type of an object that is possibly an array.
+ *
+ * @experimental 21.0.0
+ */
+export type ItemType<T extends Object> =
+  | (T & readonly any[])[number]
+  | Exclude<T, readonly any[]>[keyof Exclude<T, readonly any[]>];
