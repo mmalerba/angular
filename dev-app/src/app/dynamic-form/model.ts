@@ -1,71 +1,64 @@
-import type {FieldTree} from '@angular/forms/signals';
-import {isGroup, LABEL, type FieldSpec} from './spec';
+import type {FieldSpec} from './spec';
 
-export type TerminalDataModel = string;
-export type GroupDataModel = (TerminalDataModel | GroupDataModel)[];
-export type DynamicDataModel = TerminalDataModel | GroupDataModel;
+export type DynamicModelPrimitive = string | number | boolean;
 
-// 🔪 Complicated computation
+export type DynamicModelObject = {[k: PropertyKey]: DynamicModel};
+
+export type DynamicModelArray = DynamicModel[];
+
+export type DynamicModel = DynamicModelPrimitive | DynamicModelObject | DynamicModelArray;
+
 export function computeDataModel(
-  src: FieldSpec,
-  prev?: {source: FieldSpec; value: DynamicDataModel},
-): DynamicDataModel {
+  spec: FieldSpec,
+  prev?: {source: FieldSpec; value: DynamicModel},
+): DynamicModel {
   if (!prev) {
-    return extractInitial(src);
+    return extractInitial(spec);
   }
-  const {source: prevSrc, value: prevValue} = prev;
-  if (isGroup(src) && isGroup(prevSrc)) {
-    const items = src.children.map((it) => {
-      const prevItIdx = prevSrc.children.findIndex((prevIt) => it.name === prevIt.name);
-      if (prevItIdx === -1) {
-        return computeDataModel(it);
-      }
-      const prevItSrc = prevSrc.children[prevItIdx];
-      const prevItValue = prevValue[prevItIdx];
-      const newPrev =
-        prevItSrc === undefined || prevItValue === undefined
-          ? undefined
-          : {source: prevItSrc, value: prevItValue};
-      return computeDataModel(it, newPrev);
-    });
-    // 🔪 Transferring the magic tracking symbol.
-    const newArr = Object.assign([], prevValue, items);
-    newArr.length = items.length;
-    return newArr;
+  const {source: prevSpec, value: prevModel} = prev;
+  if (spec.kind === 'group' && prevSpec.kind === 'group') {
+    assertDynamicModelObject(prevModel);
+    const result = copyTrackingSymbol(prevModel);
+    for (const key in spec.children) {
+      result[key] =
+        key in prevModel
+          ? computeDataModel(spec.children[key], {
+              source: prevSpec.children[key],
+              value: prevModel[key],
+            })
+          : computeDataModel(spec.children[key]);
+    }
+    return result;
   }
-  if (!isGroup(src) && !isGroup(prevSrc)) {
-    return prevValue;
+  if (spec.kind === 'terminal' && prevSpec.kind === 'terminal') {
+    return prevModel;
   }
-  return extractInitial(src);
+  return extractInitial(spec);
 }
 
-function extractInitial(spec: FieldSpec): DynamicDataModel {
-  if (isGroup(spec)) {
-    return spec.children.map(extractInitial);
+function extractInitial(spec: FieldSpec): DynamicModel {
+  if (spec.kind === 'group') {
+    const result: DynamicModel = {};
+    for (const key of Object.keys(spec.children)) {
+      result[key] = extractInitial(spec.children[key]);
+    }
+    return result;
   }
   return spec.initial;
 }
 
-export function computeStructuredData(f: FieldTree<{} | null>): unknown {
-  if (isArrayForm(f)) {
-    let entries = [];
-    for (const child of f) {
-      assertDefined(child);
-      const name = child().metadata(LABEL)();
-      const value = computeStructuredData(child);
-      entries.push([name, value]);
-    }
-    return Object.fromEntries(entries);
-  } else {
-    return f().value();
+function assertDynamicModelObject(data: DynamicModel): asserts data is DynamicModelObject {
+  if (typeof data !== 'object' || Array.isArray(data)) {
+    throw Error('should be dynamic model object!');
   }
 }
 
-// 🔪 Should `Array.isArray` work directly on the proxy?
-export function isArrayForm(f: FieldTree<{} | null>): f is FieldTree<({} | null)[]> {
-  return Array.isArray(f().value());
-}
-
-function assertDefined<T>(v: T | undefined): asserts v is T {
-  if (v === undefined) throw Error('undefined');
+// 🔪 We don't spread the previous model since its keys may have completely changed.
+// Therefore we need to know about and preserve the tracking symbol.
+function copyTrackingSymbol(from: DynamicModelObject): DynamicModelObject {
+  const result: DynamicModelObject = {};
+  for (const symbol of Object.getOwnPropertySymbols(from)) {
+    result[symbol] = from[symbol];
+  }
+  return result;
 }

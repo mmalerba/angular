@@ -2,8 +2,9 @@ import {Component, computed, effect, input, linkedSignal, output} from '@angular
 import {Field, form, type FieldTree} from '@angular/forms/signals';
 import {MatError, MatFormField, MatLabel} from '@angular/material/form-field';
 import {MatInput} from '@angular/material/input';
-import {computeDataModel, computeStructuredData, isArrayForm, type DynamicDataModel} from './model';
-import {createSchema, LABEL, type FieldSpec} from './spec';
+import {computeDataModel, type DynamicModel, type DynamicModelObject} from './model';
+import {createSchema, LABEL} from './schema';
+import type {FieldSpec} from './spec';
 
 @Component({
   selector: 'dynamic-form-terminal',
@@ -11,9 +12,9 @@ import {createSchema, LABEL, type FieldSpec} from './spec';
   imports: [Field, MatFormField, MatInput, MatError, MatLabel],
   template: `
     <mat-form-field>
-      <mat-label>{{ field()().metadata(LABEL)() }}</mat-label>
+      <mat-label>{{ label() }}</mat-label>
       <input matInput [field]="field()" />
-      @for (error of field()().errors(); track $index) {
+      @for (error of errors(); track $index) {
         <mat-error>{{ error.message ?? error.kind }}</mat-error>
       }
     </mat-form-field>
@@ -27,9 +28,11 @@ import {createSchema, LABEL, type FieldSpec} from './spec';
   ],
 })
 export class DynamicFormTerminal {
-  field = input.required<FieldTree<{} | null>>();
+  field = input.required<FieldTree<DynamicModel>>();
 
-  LABEL = LABEL;
+  label = computed(() => this.field()().metadata(LABEL)());
+
+  errors = computed(() => this.field()().errors());
 }
 
 @Component({
@@ -37,12 +40,12 @@ export class DynamicFormTerminal {
   standalone: true,
   imports: [DynamicFormTerminal],
   template: `
-    <p>{{ field()().metadata(LABEL)() }}</p>
-    @for (child of field(); track child) {
-      @if (isArrayForm(child)) {
-        <dynamic-form-group [field]="child" />
+    <p>{{ label() }}</p>
+    @for (item of items(); track item.key) {
+      @if (isObjectForm(item.child)) {
+        <dynamic-form-group [field]="item.child" />
       } @else {
-        <dynamic-form-terminal [field]="child" />
+        <dynamic-form-terminal [field]="item.child" />
       }
     }
   `,
@@ -57,10 +60,13 @@ export class DynamicFormTerminal {
   ],
 })
 export class DynamicFormGroup {
-  field = input.required<FieldTree<({} | null)[]>>();
+  field = input.required<FieldTree<DynamicModelObject>>();
 
-  LABEL = LABEL;
-  isArrayForm = isArrayForm;
+  items = computed(() => Object.entries(this.field()).map(([key, child]) => ({key, child})));
+
+  label = computed(() => this.field()().metadata(LABEL)());
+
+  isObjectForm = isObjectForm;
 }
 
 @Component({
@@ -68,7 +74,7 @@ export class DynamicFormGroup {
   standalone: true,
   imports: [DynamicFormTerminal, DynamicFormGroup],
   template: `
-    @if (isArrayForm(form)) {
+    @if (isObjectForm(form)) {
       <dynamic-form-group [field]="form" />
     } @else {
       <dynamic-form-terminal [field]="form" />
@@ -88,25 +94,22 @@ export class DynamicForm {
 
   valueChange = output<unknown>();
 
-  model = linkedSignal<FieldSpec, DynamicDataModel>({
+  model = linkedSignal<FieldSpec, DynamicModel>({
     source: this.spec,
     computation: computeDataModel,
   });
 
-  // 🔪 Need to use explicit `{} | null` to avoid infinite recursion in the type system
-  form = form<{} | null>(this.model, createSchema(this.spec));
-
-  // 🔪 Need a computed on top of our form to get the model structured nicely
-  structured = computed(() => computeStructuredData(this.form));
-
-  isArrayForm = isArrayForm;
+  form = form(this.model, createSchema(this.spec));
 
   constructor() {
     effect(() => {
-      this.valueChange.emit(this.structured());
-    });
-    effect(() => {
-      console.log(this.model());
+      this.valueChange.emit(this.form().value());
     });
   }
+
+  isObjectForm = isObjectForm;
+}
+
+function isObjectForm<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelObject> {
+  return typeof f().value() === 'object' && !Array.isArray(f().value());
 }

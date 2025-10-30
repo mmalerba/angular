@@ -1,14 +1,13 @@
 import {JsonPipe} from '@angular/common';
 import {Component, signal} from '@angular/core';
 import {Field, form} from '@angular/forms/signals';
-import {DynamicForm} from './dynamic-form/dynamic-form';
-import {isGroup, type FieldSpec} from './dynamic-form/spec';
+import {DynamicForm} from './dynamic-form/components';
+import {assertGroupFieldSpec, lookupFieldSpec, type FieldSpec} from './dynamic-form/spec';
 
 interface AddInfo {
   name: string;
   initial: string;
   required: boolean;
-  to: string;
 }
 
 @Component({
@@ -27,45 +26,44 @@ interface AddInfo {
     <label>Name<input [field]="addForm.name" /></label>
     <label>Initial value<input [field]="addForm.initial" /></label>
     <label>Required<input type="checkbox" [field]="addForm.required" /></label>
-    <label>To<input [field]="addForm.to" /></label>
     <button (click)="add()">add</button>
 
     <h3>Reorder:</h3>
-    <!-- 🔪 Tracking forcing us to use more layers of object. -->
-    <!--
-      TODO: Tracking doesn't work right. Need to use {value: ''} for terminal so it can get a special tracking symbol
-    -->
     <button (click)="shuffle()">shuffle order</button>
 
     <h2>Form</h2>
-    <dynamic-form [spec]="form().value()" (valueChange)="input.set($event)" />
+    <dynamic-form [spec]="form().value()" (valueChange)="userInput.set($event)" />
 
-    <h2>Input</h2>
-    <pre>{{ input() | json }}</pre>
+    <h2>User Input</h2>
+    <pre>{{ userInput() | json }}</pre>
   `,
 })
 export class AppComponent {
   form = form(
     signal<FieldSpec>({
-      name: 'Order',
-      children: [
-        {
-          name: 'Name',
-          children: [
-            {name: 'First', initial: 'Bob', validation: {required: true}},
-            {name: 'Last', initial: 'Loblaw', validation: {required: false}},
-          ],
+      kind: 'group',
+      children: {
+        name: {
+          kind: 'group',
+          children: {
+            first: {kind: 'terminal', initial: 'Bob', validation: {required: true}},
+            last: {
+              kind: 'terminal',
+              initial: 'Loblaw',
+              validation: {required: false},
+            },
+          },
         },
-        {
-          name: 'Address',
-          children: [
-            {name: 'Street', initial: '', validation: {required: true}},
-            {name: 'City', initial: '', validation: {required: true}},
-            {name: 'State', initial: '', validation: {required: true}},
-            {name: 'Zip', initial: '', validation: {required: true}},
-          ],
+        address: {
+          kind: 'group',
+          children: {
+            street: {kind: 'terminal', initial: '', validation: {required: true}},
+            city: {kind: 'terminal', initial: '', validation: {required: true}},
+            state: {kind: 'terminal', initial: '', validation: {required: true}},
+            zip: {kind: 'terminal', initial: '', validation: {required: true}},
+          },
         },
-      ],
+      },
     }),
   );
 
@@ -73,7 +71,7 @@ export class AppComponent {
 
   addForm = form(signal({name: '', initial: '', required: false, to: ''}));
 
-  input = signal<unknown>(undefined);
+  userInput = signal<unknown>(undefined);
 
   remove() {
     this.form().value.update((current) => remove(current, this.removeForm().value()));
@@ -89,44 +87,35 @@ export class AppComponent {
 }
 
 function remove(spec: FieldSpec, name: string): FieldSpec {
-  if (spec.name === name) {
-    return {name: '', children: []};
-  }
-  if (isGroup(spec)) {
-    return {
-      ...spec,
-      children: spec.children.filter((it) => it.name !== name).map((it) => remove(it, name)),
-    };
-  }
-  return spec;
+  if (!name) return {kind: 'group', children: {}};
+  const path = name.split('.');
+  const key = path.pop()!;
+  const group = lookupFieldSpec(spec, path);
+  assertGroupFieldSpec(group);
+  delete group.children[key];
+  return {...spec};
 }
 
-function add(spec: FieldSpec, info: AddInfo): FieldSpec {
-  if (isGroup(spec)) {
-    if (spec.name === info.to || info.to === '') {
-      return {
-        ...spec,
-        children: [
-          ...spec.children,
-          {
-            name: info.name,
-            initial: info.initial,
-            validation: {required: info.required},
-          },
-        ],
-      };
-    } else {
-      return {...spec, children: spec.children.map((it) => add(it, info))};
-    }
-  }
+function add(spec: FieldSpec, {name, initial, required}: AddInfo): FieldSpec {
+  if (!name) return spec;
+  const path = name.split('.');
+  const key = path.pop()!;
+  const group = lookupFieldSpec(spec, path);
+  assertGroupFieldSpec(group);
+  group.children[key] = {kind: 'terminal', initial, validation: {required}};
   return {...spec};
 }
 
 function shuffle(spec: FieldSpec): FieldSpec {
-  if (isGroup(spec)) {
-    return {...spec, children: shuffleArr(spec.children.map(shuffle))};
+  if (spec.kind === 'group') {
+    return {
+      ...spec,
+      children: Object.fromEntries(
+        shuffleArr(Object.entries(spec.children).map(([k, s]) => [k, shuffle(s)] as const)),
+      ),
+    };
   }
-  return spec;
+  return {...spec};
 }
 
 function shuffleArr<T>(arr: T[]): T[] {
