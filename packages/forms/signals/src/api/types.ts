@@ -160,7 +160,7 @@ export type FieldTree<TValue, TKey extends string | number = string | number> = 
   TValue,
   TKey
 >) &
-  (TValue extends Array<infer U>
+  (TValue & {} extends Array<infer U>
     ? ReadonlyArrayLike<MaybeFieldTree<U, number>>
     : TValue extends Record<string, any>
       ? Subfields<TValue>
