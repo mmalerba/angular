@@ -51,4 +51,14 @@ export const FIELD_PROXY_HANDLER: ProxyHandler<() => FieldNode> = {
     // Otherwise, this property doesn't exist.
     return undefined;
   },
+
+  getOwnPropertyDescriptor(getTgt, prop) {
+    const value = untracked(getTgt().value) as object;
+    return Reflect.getOwnPropertyDescriptor(value, prop);
+  },
+
+  ownKeys(getTgt: () => FieldNode) {
+    const value = untracked(getTgt().value);
+    return typeof value === 'object' && value !== null ? Reflect.ownKeys(value) : [];
+  },
 };
