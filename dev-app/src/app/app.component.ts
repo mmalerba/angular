@@ -63,6 +63,25 @@ export class AppComponent {
             zip: {kind: 'terminal', initial: '', validation: {required: true}},
           },
         },
+        items: {
+          kind: 'array',
+          initial: [
+            {name: 'Apple', quantity: 5},
+            {name: 'Banana', quantity: 2},
+          ],
+          template: {
+            kind: 'group',
+            children: {
+              name: {
+                kind: 'terminal',
+                initial: '',
+                validation: {required: true},
+              },
+              quantity: {kind: 'terminal', initial: 1, validation: {required: true}},
+            },
+          },
+          validation: {minLength: 1, maxLength: 5},
+        },
       },
     }),
   );
@@ -114,6 +133,9 @@ function shuffle(spec: FieldSpec): FieldSpec {
         shuffleArr(Object.entries(spec.children).map(([k, s]) => [k, shuffle(s)] as const)),
       ),
     };
+  }
+  if (spec.kind === 'array') {
+    return {...spec, template: shuffle(spec.template)};
   }
   return {...spec};
 }

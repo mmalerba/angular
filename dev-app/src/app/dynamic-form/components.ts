@@ -1,11 +1,20 @@
-import {Component, computed, effect, input, linkedSignal, output} from '@angular/core';
+import {Component, computed, effect, forwardRef, input, linkedSignal, output} from '@angular/core';
 import {Field, form, type FieldTree} from '@angular/forms/signals';
+import {MatButton} from '@angular/material/button';
 import {MatError, MatFormField, MatLabel} from '@angular/material/form-field';
 import {MatInput} from '@angular/material/input';
-import {computeDataModel, type DynamicModel, type DynamicModelObject} from './model';
-import {createSchema, LABEL} from './schema';
+import {
+  computeDataModel,
+  isDynamicModelArray,
+  isDynamicModelObject,
+  type DynamicModel,
+  type DynamicModelArray,
+  type DynamicModelObject,
+} from './model';
+import {ARRAY_ITEM_TEMPLATE, createSchema, LABEL} from './schema';
 import type {FieldSpec} from './spec';
 
+// 🔪 Four related & similar components.
 @Component({
   selector: 'dynamic-form-terminal',
   standalone: true,
@@ -38,12 +47,14 @@ export class DynamicFormTerminal {
 @Component({
   selector: 'dynamic-form-group',
   standalone: true,
-  imports: [DynamicFormTerminal],
+  imports: [DynamicFormTerminal, forwardRef(() => DynamicFormArray)],
   template: `
     <p>{{ label() }}</p>
     @for (item of items(); track item.key) {
-      @if (isObjectForm(item.child)) {
+      @if (isObjectFieldTree(item.child)) {
         <dynamic-form-group [field]="item.child" />
+      } @else if (isArrayFieldTree(item.child)) {
+        <dynamic-form-array [field]="item.child"/>
       } @else {
         <dynamic-form-terminal [field]="item.child" />
       }
@@ -62,20 +73,82 @@ export class DynamicFormTerminal {
 export class DynamicFormGroup {
   field = input.required<FieldTree<DynamicModelObject>>();
 
+  // 🔪 Worth giving object fields an entry iterator to avoid this?
   items = computed(() => Object.entries(this.field()).map(([key, child]) => ({key, child})));
 
   label = computed(() => this.field()().metadata(LABEL)());
 
-  isObjectForm = isObjectForm;
+  isObjectFieldTree = isObjectFieldTree;
+  isArrayFieldTree = isArrayFieldTree;
+}
+
+@Component({
+  selector: 'dynamic-form-array',
+  standalone: true,
+  imports: [DynamicFormTerminal, DynamicFormGroup, MatButton],
+  template: `
+    <p>{{ label() }}</p>
+    @if (canAdd()) {
+      <button matButton (click)="add()">Add</button>
+    }
+    @for (item of field(); track item) {
+      @if (isObjectFieldTree(item)) {
+        <dynamic-form-group [field]="item" />
+      } @else if (isArrayFieldTree(item)) {
+        <dynamic-form-array [field]="item"/>
+      } @else {
+        <dynamic-form-terminal [field]="item" />
+      }
+      @if (canRemove()) {
+        <div class="close"><button matButton (click)="remove($index)">Remove</button></div>
+      }
+    }
+  `,
+  styles: [
+    `
+      :host, .close {
+        display: block;
+        border-left: 2px solid black;
+        padding-left: 10px;
+      }
+    `,
+  ],
+})
+export class DynamicFormArray {
+  field = input.required<FieldTree<DynamicModelArray>>();
+
+  state = computed(() => this.field()());
+
+  label = computed(() => this.state().metadata(LABEL)());
+
+  addTemplate = computed(() => this.state().metadata(ARRAY_ITEM_TEMPLATE)());
+
+  canAdd = computed(() => this.state().value().length < (this.state().maxLength?.() ?? Infinity));
+
+  canRemove = computed(() => this.state().value().length > (this.state().minLength?.() ?? -1));
+
+  add() {
+    this.state().value.update((prev) => [this.addTemplate()!, ...prev]);
+  }
+
+  remove(idx: number) {
+    console.log('remove', idx);
+    this.state().value.update((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  isObjectFieldTree = isObjectFieldTree;
+  isArrayFieldTree = isArrayFieldTree;
 }
 
 @Component({
   selector: 'dynamic-form',
   standalone: true,
-  imports: [DynamicFormTerminal, DynamicFormGroup],
+  imports: [DynamicFormTerminal, DynamicFormGroup, DynamicFormArray],
   template: `
-    @if (isObjectForm(form)) {
+    @if (isObjectFieldTree(form)) {
       <dynamic-form-group [field]="form" />
+    } @else if (isArrayFieldTree(form)) {
+      <dynamic-form-array [field]="form"/>
     } @else {
       <dynamic-form-terminal [field]="form" />
     }
@@ -107,9 +180,14 @@ export class DynamicForm {
     });
   }
 
-  isObjectForm = isObjectForm;
+  isObjectFieldTree = isObjectFieldTree;
+  isArrayFieldTree = isArrayFieldTree;
 }
 
-function isObjectForm<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelObject> {
-  return typeof f().value() === 'object' && !Array.isArray(f().value());
+function isObjectFieldTree<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelObject> {
+  return isDynamicModelObject(f().value());
+}
+
+function isArrayFieldTree<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelArray> {
+  return isDynamicModelArray(f().value());
 }

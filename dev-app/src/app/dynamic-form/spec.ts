@@ -1,6 +1,8 @@
+import type {DynamicModel, DynamicModelPrimitive} from './model';
+
 export interface TerminalFieldSpec {
   kind: 'terminal';
-  initial: string;
+  initial: DynamicModelPrimitive;
   validation: {required: boolean};
 }
 
@@ -9,14 +11,31 @@ export interface GroupFieldSpec {
   children: {[key: string]: FieldSpec};
 }
 
-export type FieldSpec = TerminalFieldSpec | GroupFieldSpec;
+export interface ArrayFieldSpec {
+  kind: 'array';
+  initial: DynamicModel[];
+  template: FieldSpec;
+  validation: {minLength: number; maxLength: number};
+}
+
+export type FieldSpec = TerminalFieldSpec | GroupFieldSpec | ArrayFieldSpec;
 
 export function lookupFieldSpec(spec: FieldSpec, keys: readonly string[]): FieldSpec {
   for (const key of keys) {
-    assertGroupFieldSpec(spec);
-    spec = spec.children[key];
+    if (spec.kind === 'array') {
+      spec = spec.template;
+    } else {
+      assertGroupFieldSpec(spec);
+      spec = spec.children[key];
+    }
   }
   return spec;
+}
+
+export function assertTerminalFieldSpec(spec: FieldSpec): asserts spec is TerminalFieldSpec {
+  if (spec.kind !== 'terminal') {
+    throw Error('should be group field spec!');
+  }
 }
 
 export function assertGroupFieldSpec(spec: FieldSpec): asserts spec is GroupFieldSpec {
@@ -25,8 +44,8 @@ export function assertGroupFieldSpec(spec: FieldSpec): asserts spec is GroupFiel
   }
 }
 
-export function assertTerminalFieldSpec(spec: FieldSpec): asserts spec is TerminalFieldSpec {
-  if (spec.kind !== 'terminal') {
-    throw Error('should be terminal field spec!');
+export function assertArrayFieldSpec(spec: FieldSpec): asserts spec is ArrayFieldSpec {
+  if (spec.kind !== 'array') {
+    throw Error('should be array field spec!');
   }
 }
