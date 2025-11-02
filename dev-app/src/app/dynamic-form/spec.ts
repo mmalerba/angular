@@ -1,8 +1,8 @@
-import type {DynamicModel, DynamicModelPrimitive} from './model';
+import type {DynamicModel, DynamicModelTerminal} from './model';
 
 export interface TerminalFieldSpec {
   kind: 'terminal';
-  initial: DynamicModelPrimitive;
+  initial: DynamicModelTerminal;
   validation: {required: boolean};
 }
 

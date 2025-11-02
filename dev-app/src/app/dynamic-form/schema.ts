@@ -2,6 +2,7 @@ import type {Signal} from '@angular/core';
 import {
   aggregateMetadata,
   applyEach,
+  applyWhen,
   applyWhenValue,
   maxLength,
   minLength,
@@ -10,7 +11,7 @@ import {
   schema,
   type FieldPath,
 } from '@angular/forms/signals';
-import {extractInitial, type DynamicModel} from './model';
+import {extractInitial, type DynamicModel, type DynamicModelArray} from './model';
 import {
   assertArrayFieldSpec,
   assertTerminalFieldSpec,
@@ -27,14 +28,19 @@ export const ARRAY_ITEM_TEMPLATE = reducedMetadataKey(
   (_: DynamicModel | undefined, next: DynamicModel) => next,
   () => undefined,
 );
+export const SPEC_KIND = reducedMetadataKey(
+  (_: FieldSpec['kind'], next: FieldSpec['kind']) => next,
+  () => 'terminal' as const,
+);
 
 // 🔪 Complex recursive schema.
 export function createSchema(spec: Signal<FieldSpec>) {
   const dynamicSchema = schema((p: FieldPath<DynamicModel>) => {
     aggregateMetadata(p, LABEL, ({pathKeys}) => pathKeys()[pathKeys().length - 1] ?? '<root>');
-    applyWhenValue(
+    aggregateMetadata(p, SPEC_KIND, ({pathKeys}) => lookupFieldSpec(spec(), pathKeys()).kind);
+    applyWhen(
       p,
-      (v) => v === null || typeof v !== 'object',
+      ({pathKeys}) => lookupFieldSpec(spec(), pathKeys()).kind === 'terminal',
       (terminal) => {
         required(terminal, {
           when: ({pathKeys}) => {
@@ -45,16 +51,16 @@ export function createSchema(spec: Signal<FieldSpec>) {
         });
       },
     );
-    applyWhenValue(
+    applyWhen(
       p,
-      (v) => Array.isArray(v),
+      ({pathKeys}) => lookupFieldSpec(spec(), pathKeys()).kind === 'array',
       (array) => {
-        minLength(array, ({pathKeys}) => {
+        minLength(array as FieldPath<DynamicModelArray>, ({pathKeys}) => {
           const s = lookupFieldSpec(spec(), pathKeys());
           assertArrayFieldSpec(s);
           return s.validation.minLength;
         });
-        maxLength(array, ({pathKeys}) => {
+        maxLength(array as FieldPath<DynamicModelArray>, ({pathKeys}) => {
           const s = lookupFieldSpec(spec(), pathKeys());
           assertArrayFieldSpec(s);
           return s.validation.maxLength;

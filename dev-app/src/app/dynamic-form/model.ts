@@ -1,12 +1,12 @@
 import type {FieldSpec} from './spec';
 
-export type DynamicModelPrimitive = string | number | boolean | symbol | bigint | null;
+export type DynamicModelTerminal = {} | null;
 
-export type DynamicModelObject = {[k: string]: DynamicModel};
+export type DynamicModelGroup = {[k: string]: DynamicModel};
 
 export type DynamicModelArray = DynamicModel[];
 
-export type DynamicModel = DynamicModelPrimitive | DynamicModelObject | DynamicModelArray;
+export type DynamicModel = DynamicModelTerminal | DynamicModelGroup | DynamicModelArray;
 
 // 🔪 Complex computation.
 export function computeDataModel(
@@ -18,7 +18,7 @@ export function computeDataModel(
   }
   const {source: prevSpec, value: prevModel} = prev;
   if (spec.kind === 'group' && prevSpec.kind === 'group') {
-    assertDynamicModelObject(prevModel);
+    assertDynamicModelGroup(prevModel);
     const result = copyTrackingSymbol(prevModel);
     for (const key in spec.children) {
       result[key] =
@@ -45,7 +45,7 @@ export function computeDataModel(
 
 export function extractInitial(spec: FieldSpec): DynamicModel {
   if (spec.kind === 'group') {
-    const result: DynamicModel = {};
+    const result: DynamicModelGroup = {};
     for (const key of Object.keys(spec.children)) {
       result[key] = extractInitial(spec.children[key]);
     }
@@ -54,16 +54,8 @@ export function extractInitial(spec: FieldSpec): DynamicModel {
   return spec.initial;
 }
 
-export function isDynamicModelObject(model: DynamicModel): model is DynamicModelObject {
-  return model !== null && typeof model === 'object' && !Array.isArray(model);
-}
-
-export function isDynamicModelArray(model: DynamicModel): model is DynamicModelArray {
-  return Array.isArray(model);
-}
-
-function assertDynamicModelObject(model: DynamicModel): asserts model is DynamicModelObject {
-  if (!isDynamicModelObject(model)) {
+function assertDynamicModelGroup(model: DynamicModel): asserts model is DynamicModelGroup {
+  if (!isDynamicModelGroup(model)) {
     throw Error('should be dynamic model object!');
   }
 }
@@ -82,4 +74,12 @@ function copyTrackingSymbol<T extends {[k: PropertyKey]: unknown}>(from: T): T {
     (result as any)[symbol] = from[symbol];
   }
   return result;
+}
+
+function isDynamicModelGroup(model: DynamicModel): model is DynamicModelGroup {
+  return model !== null && typeof model === 'object' && !Array.isArray(model);
+}
+
+function isDynamicModelArray(model: DynamicModel): model is DynamicModelArray {
+  return Array.isArray(model);
 }

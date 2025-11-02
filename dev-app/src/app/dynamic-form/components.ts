@@ -5,13 +5,11 @@ import {MatError, MatFormField, MatLabel} from '@angular/material/form-field';
 import {MatInput} from '@angular/material/input';
 import {
   computeDataModel,
-  isDynamicModelArray,
-  isDynamicModelObject,
   type DynamicModel,
   type DynamicModelArray,
-  type DynamicModelObject,
+  type DynamicModelGroup,
 } from './model';
-import {ARRAY_ITEM_TEMPLATE, createSchema, LABEL} from './schema';
+import {ARRAY_ITEM_TEMPLATE, createSchema, LABEL, SPEC_KIND} from './schema';
 import type {FieldSpec} from './spec';
 
 // 🔪 Four related & similar components.
@@ -71,14 +69,14 @@ export class DynamicFormTerminal {
   ],
 })
 export class DynamicFormGroup {
-  field = input.required<FieldTree<DynamicModelObject>>();
+  field = input.required<FieldTree<DynamicModelGroup>>();
 
   // 🔪 Worth giving object fields an entry iterator to avoid this?
   items = computed(() => Object.entries(this.field()).map(([key, child]) => ({key, child})));
 
   label = computed(() => this.field()().metadata(LABEL)());
 
-  isObjectFieldTree = isObjectFieldTree;
+  isObjectFieldTree = isGroupFieldTree;
   isArrayFieldTree = isArrayFieldTree;
 }
 
@@ -136,7 +134,7 @@ export class DynamicFormArray {
     this.state().value.update((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  isObjectFieldTree = isObjectFieldTree;
+  isObjectFieldTree = isGroupFieldTree;
   isArrayFieldTree = isArrayFieldTree;
 }
 
@@ -180,14 +178,14 @@ export class DynamicForm {
     });
   }
 
-  isObjectFieldTree = isObjectFieldTree;
+  isObjectFieldTree = isGroupFieldTree;
   isArrayFieldTree = isArrayFieldTree;
 }
 
-function isObjectFieldTree<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelObject> {
-  return isDynamicModelObject(f().value());
+function isGroupFieldTree<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelGroup> {
+  return f().metadata(SPEC_KIND)() === 'group';
 }
 
 function isArrayFieldTree<T>(f: FieldTree<DynamicModel>): f is FieldTree<DynamicModelArray> {
-  return isDynamicModelArray(f().value());
+  return f().metadata(SPEC_KIND)() === 'array';
 }
