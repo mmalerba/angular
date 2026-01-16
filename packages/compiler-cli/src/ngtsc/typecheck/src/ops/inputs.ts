@@ -91,7 +91,9 @@ export class TcbDirectiveInputsOp extends TcbOp {
       );
 
       if (additionalBindings !== null) {
-        boundAttrs.push(...additionalBindings);
+        // Toggling this line should break/un-break template type-checking for signal forms.
+        // boundAttrs.push(...additionalBindings);
+        // Now try `pnpm bazel build //packages/forms/signals/test/web/...`
       }
     }
 
