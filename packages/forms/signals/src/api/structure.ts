@@ -6,7 +6,15 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 
-import {inject, Injector, runInInjectionContext, untracked, WritableSignal} from '@angular/core';
+import {
+  effect,
+  inject,
+  Injector,
+  ɵpromiseWithResolvers as promiseWithResolvers,
+  runInInjectionContext,
+  untracked,
+  WritableSignal,
+} from '@angular/core';
 
 import {BasicFieldAdapter, FieldAdapter} from '../field/field_adapter';
 import {FormFieldManager} from '../field/manager';
@@ -31,6 +39,20 @@ import type {
   TreeValidationResult,
 } from './types';
 
+export interface FormSubmitOptions<TModel> {
+  /** Function to run when submitting the form data (when form is valid). */
+  action: (form: FieldTree<TModel>) => Promise<TreeValidationResult>;
+  /** Function to run when attempting to submit the form data but validation is failing. */
+  onInvalid?: (form: FieldTree<TModel>) => void;
+  /**
+   * How to handle validation:
+   * - 'skipPending': Submit action is run if validators are passing, does not wait for pending validators (default)
+   * - 'waitForPending': Submit action is run if validators are passing, waits for pending validators
+   * - 'ignore': Submit action is always run regardless of validation status.
+   */
+  validationMode?: 'skipPending' | 'waitForPending' | 'ignore';
+}
+
 /**
  * Options that may be specified when creating a form.
  *
@@ -43,11 +65,13 @@ export interface FormOptions {
    * current [injection context](guide/di/dependency-injection-context), will be used.
    */
   injector?: Injector;
+  /** The name of the root form, used in generating name attributes for the fields. */
   name?: string;
 
   /**
    * Adapter allows managing fields in a more flexible way.
    * Currently this is used to support interop with reactive forms.
+   * @internal
    */
   adapter?: FieldAdapter;
 }
@@ -350,15 +374,17 @@ export function applyWhenValue(
  * }
  *
  * const registrationForm = form(signal({username: 'god', password: ''}));
- * submit(registrationForm, async (f) => {
- *   return registerNewUser(registrationForm);
+ * submit(registrationForm, {
+ *   action: async (f) => {
+ *     return registerNewUser(registrationForm);
+ *   }
  * });
  * registrationForm.username().errors(); // [{kind: 'server', message: 'Username already taken'}]
  * ```
  *
  * @param form The field to submit.
- * @param action An asynchronous action used to submit the field. The action may return submission
- * errors.
+ * @param options Options for the submission.
+ * @returns Whether the submission was successful.
  * @template TModel The data type of the field being submitted.
  *
  * @category submission
@@ -366,23 +392,52 @@ export function applyWhenValue(
  */
 export async function submit<TModel>(
   form: FieldTree<TModel>,
-  action: (form: FieldTree<TModel>) => Promise<TreeValidationResult>,
-) {
+  options: FormSubmitOptions<TModel>,
+): Promise<boolean> {
+  const {action, onInvalid} = options;
+  const validationMode = options.validationMode ?? 'skipPending';
   const node = form() as unknown as FieldNode;
+  const injector = node.structure.fieldManager.injector;
+
   const invalid = untracked(() => {
     markAllAsTouched(node);
     return node.invalid();
   });
 
-  // Fail fast if the form is already invalid.
-  if (invalid) {
-    return;
+  node.submitState.selfSubmitting.set(true);
+
+  // Wait until we know whether or not to run the action.
+  let shouldRunAction = true;
+  if (validationMode === 'skipPending' && invalid) {
+    shouldRunAction = false;
+  }
+  if (validationMode === 'waitForPending') {
+    const {promise, resolve} = promiseWithResolvers<boolean>();
+    const effectRef = effect(
+      () => {
+        if (invalid) {
+          resolve(false);
+          effectRef.destroy();
+        } else if (!node.pending()) {
+          resolve(true);
+          effectRef.destroy();
+        }
+      },
+      {injector},
+    );
+    shouldRunAction = await promise;
   }
 
-  node.submitState.selfSubmitting.set(true);
+  // Run the action (or alternatively the `onInvalid` callback)
   try {
-    const errors = await action(form);
-    errors && setSubmissionErrors(node, errors);
+    if (shouldRunAction) {
+      const errors = await action(form);
+      errors && setSubmissionErrors(node, errors);
+      return !errors || (isArray(errors) && errors.length === 0);
+    } else if (onInvalid) {
+      onInvalid(form);
+    }
+    return false;
   } finally {
     node.submitState.selfSubmitting.set(false);
   }
