@@ -555,6 +555,42 @@ describe('submit', () => {
 
     expect(submitSpy).toHaveBeenCalled();
   });
+
+  it('falls back to form-level submit options', async () => {
+    const data = signal({first: '', last: ''});
+    const submitSpy = jasmine.createSpy('submit');
+    const f = form(
+      data,
+      (name) => {
+        required(name.first);
+      },
+      {injector, submission: {action: submitSpy}},
+    );
+
+    f.first().value.set('John');
+    expect(await submit(f)).toBe(true);
+    expect(submitSpy).toHaveBeenCalled();
+  });
+
+  // TODO: should this return true? false? reject the promise?
+  it('succeeds when no submit options are provided', async () => {
+    const data = signal({first: ''});
+    const f = form(data, {injector});
+
+    expect(await submit(f)).toBe(true);
+  });
+
+  it('overrides form-level submit options', async () => {
+    const data = signal({first: ''});
+    const defaultSpy = jasmine.createSpy('defaultSpy');
+    const overrideSpy = jasmine.createSpy('overrideSpy');
+    const f = form(data, {injector, submission: {action: defaultSpy}});
+
+    expect(await submit(f, {action: overrideSpy})).toBe(true);
+
+    expect(defaultSpy).not.toHaveBeenCalled();
+    expect(overrideSpy).toHaveBeenCalled();
+  });
 });
 
 /**
